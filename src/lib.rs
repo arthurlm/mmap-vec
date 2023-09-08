@@ -107,7 +107,7 @@ Check TODO and DONE bellow for this 😁.
  */
 
 use std::{
-    io,
+    io, mem,
     ops::{Deref, DerefMut},
 };
 
@@ -115,8 +115,11 @@ pub use segment::Segment;
 pub use segment_builder::{DefaultSegmentBuilder, SegmentBuilder};
 pub use vec_builder::MmapVecBuilder;
 
+use crate::utils::page_size;
+
 mod segment;
 mod segment_builder;
+mod utils;
 mod vec_builder;
 
 /// A disk memory mapped vector.
@@ -176,12 +179,13 @@ impl<T, B: SegmentBuilder> MmapVec<T, B> {
     pub fn push(&mut self, value: T) -> io::Result<()> {
         // Check if we need to growth inner segment.
         if self.segment.len() == self.segment.capacity() {
-            let new_capacity = std::cmp::max(self.segment.capacity() * 2, 1);
+            let min_capacity = page_size() / mem::size_of::<T>();
+            let new_capacity = std::cmp::max(self.segment.capacity() * 2, min_capacity);
             let new_segment = self.builder.create_new_segment::<T>(new_capacity)?;
             debug_assert!(new_segment.capacity() > self.segment.capacity());
 
             // Copy previous data to new segment.
-            let old_segment = std::mem::replace(&mut self.segment, new_segment);
+            let old_segment = mem::replace(&mut self.segment, new_segment);
             self.segment.fill_from(old_segment);
         }
 

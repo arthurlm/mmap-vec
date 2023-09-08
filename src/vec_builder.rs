@@ -1,8 +1,6 @@
 use std::{io, marker::PhantomData, mem};
 
-use crate::{DefaultSegmentBuilder, MmapVec, SegmentBuilder};
-
-const PAGE_SIZE: usize = 4096;
+use crate::{utils::page_size, DefaultSegmentBuilder, MmapVec, SegmentBuilder};
 
 /// Helps to create vec with custom parameters.
 #[derive(Debug)]
@@ -17,7 +15,7 @@ impl<T, SB: SegmentBuilder> MmapVecBuilder<T, SB> {
     pub fn new() -> Self {
         Self {
             segment_builder: Default::default(),
-            capacity: PAGE_SIZE / mem::size_of::<T>(),
+            capacity: page_size() / mem::size_of::<T>(),
             _phantom: PhantomData,
         }
     }

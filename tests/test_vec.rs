@@ -14,18 +14,31 @@ fn test_resize() {
     let mut v = MmapVec::<DataRow>::new();
     assert_eq!(v.capacity(), 0);
 
+    // Trigger first growth
     v.push(ROW1).unwrap();
-    assert_eq!(v.capacity(), 1);
+    assert_eq!(v.capacity(), 170);
     assert_eq!(v[0], ROW1);
     assert_eq!(&v[..], &[ROW1]);
 
-    v.push(ROW2).unwrap();
-    assert_eq!(v.capacity(), 2);
-    assert_eq!(&v[..], &[ROW1, ROW2]);
+    // Fill vec
+    while v.len() < v.capacity() {
+        v.push(ROW1).unwrap();
+    }
+    assert_eq!(v.capacity(), 170);
 
-    v.push(ROW3).unwrap();
-    assert_eq!(v.capacity(), 4);
-    assert_eq!(&v[..], &[ROW1, ROW2, ROW3]);
+    // Trigger second growth
+    v.push(ROW2).unwrap();
+    assert_eq!(v.capacity(), 340);
+
+    // Fill vec
+    while v.len() < v.capacity() {
+        v.push(ROW1).unwrap();
+    }
+    assert_eq!(v.capacity(), 340);
+
+    // Trigger third growth
+    v.push(ROW2).unwrap();
+    assert_eq!(v.capacity(), 680);
 }
 
 #[test]
