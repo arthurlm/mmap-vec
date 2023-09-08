@@ -113,6 +113,7 @@ impl<T> Segment<T> {
     }
 
     /// Forces the length of the segment to `new_len`.
+    #[allow(clippy::missing_safety_doc)]
     pub unsafe fn set_len(&mut self, new_len: usize) {
         debug_assert!(new_len <= self.capacity());
         self.len = new_len;
