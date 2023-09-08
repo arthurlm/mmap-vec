@@ -87,6 +87,37 @@ impl<T> Segment<T> {
         self.capacity
     }
 
+    /// Shortens the segment, keeping the first `new_len` elements and dropping
+    /// the rest.
+    pub fn truncate(&mut self, new_len: usize) {
+        if new_len > self.len {
+            return;
+        }
+
+        unsafe {
+            let remaining_len = self.len - new_len;
+            let items =
+                ptr::slice_from_raw_parts_mut(self.as_mut_ptr().add(new_len), remaining_len);
+            self.set_len(new_len);
+            ptr::drop_in_place(items);
+        }
+    }
+
+    /// Clears the segment, removing all values.
+    pub fn clear(&mut self) {
+        unsafe {
+            let items = slice::from_raw_parts_mut(self.addr as *mut T, self.len);
+            self.set_len(0);
+            ptr::drop_in_place(items);
+        }
+    }
+
+    /// Forces the length of the segment to `new_len`.
+    pub unsafe fn set_len(&mut self, new_len: usize) {
+        debug_assert!(new_len <= self.capacity());
+        self.len = new_len;
+    }
+
     /// Bytes use on disk for this segment.
     pub fn disk_size(&self) -> usize {
         self.capacity * mem::size_of::<T>()
@@ -125,7 +156,8 @@ impl<T> Segment<T> {
     }
 
     /// Erase segment content with `other` segment argument.
-    pub fn copy_from(&mut self, other: Segment<T>) {
+    pub fn fill_from(&mut self, mut other: Segment<T>) {
+        assert!(self.len == 0, "New segment contains already some data");
         assert!(
             other.capacity < self.capacity,
             "Copy segment size error (src: {}, dst: {})",
@@ -133,8 +165,11 @@ impl<T> Segment<T> {
             self.capacity
         );
 
-        unsafe { ptr::copy(other.addr as *const T, self.addr as *mut T, other.capacity) };
-        self.len = other.len;
+        unsafe {
+            ptr::copy(other.addr as *const T, self.addr as *mut T, other.capacity);
+            self.set_len(other.len);
+            other.set_len(0);
+        };
     }
 }
 
@@ -154,6 +189,12 @@ impl<T> DerefMut for Segment<T> {
 
 impl<T> Drop for Segment<T> {
     fn drop(&mut self) {
+        if self.len > 0 {
+            unsafe {
+                ptr::drop_in_place(ptr::slice_from_raw_parts_mut(self.as_mut_ptr(), self.len))
+            }
+        }
+
         if self.capacity > 0 {
             assert!(!self.addr.is_null());
 

@@ -1,4 +1,11 @@
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::PathBuf,
+    sync::{
+        atomic::{AtomicU8, Ordering},
+        Arc,
+    },
+};
 
 use mmap_vec::Segment;
 
@@ -100,21 +107,118 @@ fn test_copy() {
     assert_eq!(segment1.push_within_capacity(ROW1), Ok(()));
     assert_eq!(segment1.push_within_capacity(ROW2), Ok(()));
     assert_eq!(segment1.push_within_capacity(ROW3), Err(ROW3));
-    assert_eq!(segment2.push_within_capacity(ROW3), Ok(()));
 
     assert_eq!(&segment1[..], &[ROW1, ROW2]);
-    assert_eq!(&segment2[..], &[ROW3]);
+    assert_eq!(&segment2[..], &[]);
 
     // Erase data in seg2.
-    segment2.copy_from(segment1);
+    segment2.fill_from(segment1);
     assert_eq!(&segment2[..], &[ROW1, ROW2]);
 }
 
 #[test]
 #[should_panic]
-fn test_copy_failed() {
-    let mut segment1 = Segment::<u8>::open_rw("test_copy_failed_1", 2).unwrap();
-    let segment2 = Segment::<u8>::open_rw("test_copy_failed_2", 4).unwrap();
+fn test_copy_already_filled() {
+    let mut segment1 = Segment::open_rw("test_copy_already_filled_1", 2).unwrap();
+    let mut segment2 = Segment::open_rw("test_copy_already_filled_2", 4).unwrap();
 
-    segment1.copy_from(segment2);
+    assert_eq!(segment1.push_within_capacity(ROW1), Ok(()));
+    assert_eq!(segment2.push_within_capacity(ROW2), Ok(()));
+
+    segment2.fill_from(segment1);
+}
+
+#[test]
+#[should_panic]
+fn test_copy_bad_capacity() {
+    let mut segment1 = Segment::<u8>::open_rw("test_copy_bad_capacity_1", 2).unwrap();
+    let segment2 = Segment::<u8>::open_rw("test_copy_bad_capacity_2", 4).unwrap();
+
+    segment1.fill_from(segment2);
+}
+
+#[test]
+fn test_drop() {
+    let mut segment = Segment::<DroppableRow>::open_rw("test_drop", 5).unwrap();
+    let counter = Arc::new(AtomicU8::new(0));
+
+    // Check push / pull inc
+    assert!(segment
+        .push_within_capacity(DroppableRow::new(counter.clone()))
+        .is_ok());
+    assert_eq!(counter.load(Ordering::Relaxed), 0);
+
+    segment.pop();
+    assert_eq!(counter.load(Ordering::Relaxed), 1);
+
+    // Check drop inc
+    assert!(segment
+        .push_within_capacity(DroppableRow::new(counter.clone()))
+        .is_ok());
+    assert_eq!(counter.load(Ordering::Relaxed), 1);
+
+    drop(segment);
+    assert_eq!(counter.load(Ordering::Relaxed), 2);
+}
+
+#[test]
+fn test_truncate() {
+    let mut segment = Segment::<DroppableRow>::open_rw("test_truncate", 5).unwrap();
+    let counter = Arc::new(AtomicU8::new(0));
+
+    assert!(segment
+        .push_within_capacity(DroppableRow::new(counter.clone()))
+        .is_ok());
+    assert!(segment
+        .push_within_capacity(DroppableRow::new(counter.clone()))
+        .is_ok());
+    assert!(segment
+        .push_within_capacity(DroppableRow::new(counter.clone()))
+        .is_ok());
+    assert_eq!(counter.load(Ordering::Relaxed), 0);
+    assert_eq!(segment.len(), 3);
+
+    // Trigger with too high value
+    segment.truncate(500000);
+    assert_eq!(counter.load(Ordering::Relaxed), 0);
+    assert_eq!(segment.len(), 3);
+
+    // Trigger resize
+    segment.truncate(2);
+    assert_eq!(segment.len(), 2);
+    assert_eq!(counter.load(Ordering::Relaxed), 1);
+
+    segment.truncate(0);
+    assert_eq!(segment.len(), 0);
+    assert_eq!(counter.load(Ordering::Relaxed), 3);
+
+    // Trigger on empty segment
+    segment.truncate(0);
+    assert_eq!(segment.len(), 0);
+    assert_eq!(counter.load(Ordering::Relaxed), 3);
+}
+
+#[test]
+fn test_clear() {
+    let mut segment = Segment::<DroppableRow>::open_rw("test_clear", 5).unwrap();
+    let counter = Arc::new(AtomicU8::new(0));
+
+    assert!(segment
+        .push_within_capacity(DroppableRow::new(counter.clone()))
+        .is_ok());
+    assert!(segment
+        .push_within_capacity(DroppableRow::new(counter.clone()))
+        .is_ok());
+    assert_eq!(counter.load(Ordering::Relaxed), 0);
+    assert_eq!(segment.len(), 2);
+
+    // Trigger cleanup
+    segment.clear();
+    assert_eq!(segment.len(), 0);
+    assert_eq!(counter.load(Ordering::Relaxed), 2);
+
+    // Trigger on empty segment
+    segment.clear();
+    assert_eq!(segment.len(), 0);
+    assert_eq!(counter.load(Ordering::Relaxed), 2);
 }

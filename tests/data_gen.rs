@@ -1,3 +1,8 @@
+use std::sync::{
+    atomic::{AtomicU8, Ordering},
+    Arc,
+};
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct DataRow {
     pub bid: f64,
@@ -31,3 +36,20 @@ pub const ROW4: DataRow = DataRow {
     ask: 6.89,
     volume: 106,
 };
+
+#[derive(Debug, Clone)]
+pub struct DroppableRow {
+    counter: Arc<AtomicU8>,
+}
+
+impl DroppableRow {
+    pub fn new(counter: Arc<AtomicU8>) -> Self {
+        Self { counter }
+    }
+}
+
+impl Drop for DroppableRow {
+    fn drop(&mut self) {
+        self.counter.fetch_add(1, Ordering::Relaxed);
+    }
+}

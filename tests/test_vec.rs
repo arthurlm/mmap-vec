@@ -1,3 +1,8 @@
+use std::sync::{
+    atomic::{AtomicU8, Ordering},
+    Arc,
+};
+
 use mmap_vec::MmapVec;
 
 pub use data_gen::*;
@@ -50,4 +55,76 @@ fn test_pop() {
     assert_eq!(v.pop(), Some(ROW2));
     assert_eq!(v.pop(), Some(ROW1));
     assert_eq!(v.pop(), None);
+}
+
+#[test]
+fn test_drop() {
+    let mut v = MmapVec::<DroppableRow>::new();
+    let counter = Arc::new(AtomicU8::new(0));
+
+    // Check push / pull inc
+    assert!(v.push(DroppableRow::new(counter.clone())).is_ok());
+    assert_eq!(counter.load(Ordering::Relaxed), 0);
+
+    v.pop();
+    assert_eq!(counter.load(Ordering::Relaxed), 1);
+
+    // Check drop inc
+    assert!(v.push(DroppableRow::new(counter.clone())).is_ok());
+    assert_eq!(counter.load(Ordering::Relaxed), 1);
+
+    drop(v);
+    assert_eq!(counter.load(Ordering::Relaxed), 2);
+}
+
+#[test]
+fn test_truncate() {
+    let mut v = MmapVec::<DroppableRow>::new();
+    let counter = Arc::new(AtomicU8::new(0));
+
+    assert!(v.push(DroppableRow::new(counter.clone())).is_ok());
+    assert!(v.push(DroppableRow::new(counter.clone())).is_ok());
+    assert!(v.push(DroppableRow::new(counter.clone())).is_ok());
+    assert_eq!(counter.load(Ordering::Relaxed), 0);
+    assert_eq!(v.len(), 3);
+
+    // Trigger with too high value
+    v.truncate(500000);
+    assert_eq!(counter.load(Ordering::Relaxed), 0);
+    assert_eq!(v.len(), 3);
+
+    // Trigger resize
+    v.truncate(2);
+    assert_eq!(v.len(), 2);
+    assert_eq!(counter.load(Ordering::Relaxed), 1);
+
+    v.truncate(0);
+    assert_eq!(v.len(), 0);
+    assert_eq!(counter.load(Ordering::Relaxed), 3);
+
+    // Trigger on empty segment
+    v.truncate(0);
+    assert_eq!(v.len(), 0);
+    assert_eq!(counter.load(Ordering::Relaxed), 3);
+}
+
+#[test]
+fn test_clear() {
+    let mut v = MmapVec::<DroppableRow>::new();
+    let counter = Arc::new(AtomicU8::new(0));
+
+    assert!(v.push(DroppableRow::new(counter.clone())).is_ok());
+    assert!(v.push(DroppableRow::new(counter.clone())).is_ok());
+    assert_eq!(counter.load(Ordering::Relaxed), 0);
+    assert_eq!(v.len(), 2);
+
+    // Trigger cleanup
+    v.clear();
+    assert_eq!(v.len(), 0);
+    assert_eq!(counter.load(Ordering::Relaxed), 2);
+
+    // Trigger on empty segment
+    v.clear();
+    assert_eq!(v.len(), 0);
+    assert_eq!(counter.load(Ordering::Relaxed), 2);
 }

@@ -141,6 +141,17 @@ impl<T> MmapVec<T> {
         self.segment.capacity()
     }
 
+    /// Shortens the vec, keeping the first `new_len` elements and dropping
+    /// the rest.
+    pub fn truncate(&mut self, new_len: usize) {
+        self.segment.truncate(new_len);
+    }
+
+    /// Clears the vec, removing all values.
+    pub fn clear(&mut self) {
+        self.segment.clear();
+    }
+
     /// Remove last value of the vec.
     ///
     /// Value will be return if data structure is not empty.
@@ -164,7 +175,7 @@ impl<T> MmapVec<T> {
 
             // Copy previous data to new segment.
             let old_segment = std::mem::replace(&mut self.segment, new_segment);
-            self.segment.copy_from(old_segment);
+            self.segment.fill_from(old_segment);
         }
 
         // Add new value to vec.
