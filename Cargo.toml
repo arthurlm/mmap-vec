@@ -10,3 +10,6 @@ keywords = ["mmap", "data-strucure"]
 [dependencies]
 libc = "0.2.147"
 uuid = { version = "1.4.1", features = ["v4"] }
+
+[dev-dependencies]
+glob = "0.3.1"

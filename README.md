@@ -1,4 +1,4 @@
-# Rust memory mapped vec
+# Rust memory mapped vector
 
 This crate contains implementation / helper to create data struct that are memory mapped.
 
@@ -12,6 +12,7 @@ That is so simple !
 ```rust
 use mmap_vec::MmapVec;
 
+#[derive(Debug, PartialEq, Clone, Copy)]
 struct Row {
     id: usize,
     age: u8,
@@ -61,7 +62,9 @@ UUID V4 are generated in order to avoid collision when creating segment.
 
 > Does segment creation is configurable ?
 
-Not for now. But PR are welcomed !
+Yes ! Check out `test_custom_segment_creator::test_custom_segment_builder` for example.
+
+Since segment creation are manage through a trait. You are free to configure it the way you want.
 
 > Does this work on Windows ?
 
@@ -77,6 +80,8 @@ mmap-vec v0.1.0
     └── getrandom v0.2.10
         ├── cfg-if v1.0.0
         └── libc v0.2.147
+[dev-dependencies]
+└── glob v0.3.1
 ```
 
 > Is this crate production ready ?
@@ -86,13 +91,15 @@ Check TODO and DONE bellow for this 😁.
 ## TODO & DONE
 
 - [ ] __production ready__ base code
-- [x] unit tests
-- [x] doc / example
-- [ ] serde support
-- [ ] Ability to survive fork
+- [x] Unit tests
+- [x] Doc
+- [x] Configurable segment path creation
+- [ ] Serde support
 - [ ] CI
-- [ ] deployment
+- [ ] Crate deployment
 
 ## Ideas ?
 
 - Implement custom `std::alloc::Allocator` to use with `std::vec::Vec`
+
+License: MIT

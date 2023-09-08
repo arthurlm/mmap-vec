@@ -1,6 +1,7 @@
 #![warn(missing_docs)]
+#![deny(clippy::unwrap_used)]
 
-/*! # Rust memory mapped vec
+/*! # Rust memory mapped vector
 
 This crate contains implementation / helper to create data struct that are memory mapped.
 
@@ -64,7 +65,9 @@ UUID V4 are generated in order to avoid collision when creating segment.
 
 > Does segment creation is configurable ?
 
-Not for now. But PR are welcomed !
+Yes ! Check out `test_custom_segment_creator::test_custom_segment_builder` for example.
+
+Since segment creation are manage through a trait. You are free to configure it the way you want.
 
 > Does this work on Windows ?
 
@@ -80,6 +83,8 @@ mmap-vec v0.1.0
     └── getrandom v0.2.10
         ├── cfg-if v1.0.0
         └── libc v0.2.147
+[dev-dependencies]
+└── glob v0.3.1
 ```
 
 > Is this crate production ready ?
@@ -89,12 +94,12 @@ Check TODO and DONE bellow for this 😁.
 ## TODO & DONE
 
 - [ ] __production ready__ base code
-- [x] unit tests
-- [x] doc / example
-- [ ] serde support
-- [ ] Ability to survive fork
+- [x] Unit tests
+- [x] Doc
+- [x] Configurable segment path creation
+- [ ] Serde support
 - [ ] CI
-- [ ] deployment
+- [ ] Crate deployment
 
 ## Ideas ?
 
@@ -107,22 +112,24 @@ use std::{
 };
 
 pub use segment::Segment;
-use utils::create_unique_segment;
+pub use utils::{DefaultSegmentBuilder, SegmentBuilder};
 
 mod segment;
 mod utils;
 
 /// A disk memory mapped vector.
 #[derive(Debug)]
-pub struct MmapVec<T> {
+pub struct MmapVec<T, B: SegmentBuilder = DefaultSegmentBuilder> {
     segment: Segment<T>,
+    builder: B,
 }
 
-impl<T> MmapVec<T> {
+impl<T, B: SegmentBuilder> MmapVec<T, B> {
     /// Create a zero size mmap vec.
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             segment: Segment::null(),
+            builder: B::default(),
         }
     }
 
@@ -130,8 +137,16 @@ impl<T> MmapVec<T> {
     ///
     /// This function can fail if FS / IO failed.
     pub fn with_capacity(capacity: usize) -> io::Result<Self> {
+        Self::with_capacity_and_builder(capacity, B::default())
+    }
+
+    /// Create a mmap vec with a given capacity and segment builder.
+    ///
+    /// This function can fail if FS / IO failed.
+    pub fn with_capacity_and_builder(capacity: usize, builder: B) -> io::Result<Self> {
         Ok(Self {
-            segment: create_unique_segment(capacity)?,
+            segment: builder.create_new_segment(capacity)?,
+            builder,
         })
     }
 
@@ -170,7 +185,7 @@ impl<T> MmapVec<T> {
         // Check if we need to growth inner segment.
         if self.segment.len() == self.segment.capacity() {
             let new_capacity = std::cmp::max(self.segment.capacity() * 2, 1);
-            let new_segment = create_unique_segment::<T>(new_capacity)?;
+            let new_segment = self.builder.create_new_segment::<T>(new_capacity)?;
             debug_assert!(new_segment.capacity() > self.segment.capacity());
 
             // Copy previous data to new segment.
