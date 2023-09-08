@@ -1,5 +1,5 @@
 use glob::glob;
-use mmap_vec::{DefaultSegmentBuilder, MmapVec};
+use mmap_vec::{DefaultSegmentBuilder, MmapVecBuilder};
 
 fn get_seg_count() -> usize {
     let mut count = 0;
@@ -19,7 +19,12 @@ fn test_custom_segment_builder() {
     let start_file_count = get_seg_count();
 
     // Create new segment
-    let mut v = MmapVec::with_capacity_and_builder(500, builder).unwrap();
+    let mut v = MmapVecBuilder::new()
+        .segment_builder(builder)
+        .capacity(500)
+        .build()
+        .unwrap();
+
     v.push(42).unwrap();
 
     let new_file_count = get_seg_count();

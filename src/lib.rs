@@ -113,15 +113,17 @@ use std::{
 
 pub use segment::Segment;
 pub use segment_builder::{DefaultSegmentBuilder, SegmentBuilder};
+pub use vec_builder::MmapVecBuilder;
 
 mod segment;
 mod segment_builder;
+mod vec_builder;
 
 /// A disk memory mapped vector.
 #[derive(Debug)]
 pub struct MmapVec<T, B: SegmentBuilder = DefaultSegmentBuilder> {
-    segment: Segment<T>,
-    builder: B,
+    pub(crate) segment: Segment<T>,
+    pub(crate) builder: B,
 }
 
 impl<T, B: SegmentBuilder> MmapVec<T, B> {
@@ -137,17 +139,7 @@ impl<T, B: SegmentBuilder> MmapVec<T, B> {
     ///
     /// This function can fail if FS / IO failed.
     pub fn with_capacity(capacity: usize) -> io::Result<Self> {
-        Self::with_capacity_and_builder(capacity, B::default())
-    }
-
-    /// Create a mmap vec with a given capacity and segment builder.
-    ///
-    /// This function can fail if FS / IO failed.
-    pub fn with_capacity_and_builder(capacity: usize, builder: B) -> io::Result<Self> {
-        Ok(Self {
-            segment: builder.create_new_segment(capacity)?,
-            builder,
-        })
+        MmapVecBuilder::new().capacity(capacity).build()
     }
 
     /// Currently used vec size.
