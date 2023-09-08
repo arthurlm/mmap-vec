@@ -45,7 +45,7 @@ impl<T, SB: SegmentBuilder> MmapVecBuilder<T, SB> {
     }
 }
 
-impl<SB: SegmentBuilder + Default> Default for MmapVecBuilder<SB> {
+impl<T, SB: SegmentBuilder> Default for MmapVecBuilder<T, SB> {
     fn default() -> Self {
         Self::new()
     }
