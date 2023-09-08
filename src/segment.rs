@@ -214,3 +214,6 @@ impl<T> Drop for Segment<T> {
         }
     }
 }
+
+unsafe impl<T> Send for Segment<T> {}
+unsafe impl<T> Sync for Segment<T> {}
