@@ -112,10 +112,10 @@ use std::{
 };
 
 pub use segment::Segment;
-pub use utils::{DefaultSegmentBuilder, SegmentBuilder};
+pub use segment_builder::{DefaultSegmentBuilder, SegmentBuilder};
 
 mod segment;
-mod utils;
+mod segment_builder;
 
 /// A disk memory mapped vector.
 #[derive(Debug)]
