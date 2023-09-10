@@ -99,7 +99,7 @@ Check TODO and DONE bellow for this 😁.
 - [x] Configurable segment path creation
 - [ ] Serde support
 - [x] CI
-- [ ] Crate deployment
+- [x] Crate deployment
 
 ## Ideas ?
 
