@@ -1,6 +1,7 @@
 use std::{
     env, fs, io,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use uuid::Uuid;
@@ -16,7 +17,12 @@ pub trait SegmentBuilder: Default {
 /// Default implementation for `SegmentBuilder` trait.
 #[derive(Debug, Clone)]
 pub struct DefaultSegmentBuilder {
-    store_path: PathBuf,
+    /// Base folder where all segment will be created.
+    ///
+    /// When custom segment builder is used, this struct will be clone and
+    /// associated to every vec. So using `Arc` save some memory space here.
+    /// Performances impact for reading it is negligible compared to new segment creation.
+    store_path: Arc<PathBuf>,
 }
 
 impl DefaultSegmentBuilder {
@@ -29,13 +35,13 @@ impl DefaultSegmentBuilder {
     /// In case folder does not exists segment creation may failed.
     pub fn with_path<P: AsRef<Path>>(store_path: P) -> Self {
         Self {
-            store_path: store_path.as_ref().to_path_buf(),
+            store_path: Arc::new(store_path.as_ref().to_path_buf()),
         }
     }
 
     /// Make sure store folder exists.
     pub fn create_dir_all(&self) -> io::Result<()> {
-        fs::create_dir_all(&self.store_path)
+        fs::create_dir_all(self.store_path.as_ref())
     }
 }
 
