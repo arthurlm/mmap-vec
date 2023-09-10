@@ -27,7 +27,7 @@ let row1 = Row { id: 42, age: 18 };
 let row2 = Row { id: 894, age: 99 };
 
 // Create a memory mapped vec 😎
-let mut v = MmapVec::new();
+let mut v = MmapVec::<Row>::new();
 
 // Push can trigger new mmap segment creation, so it can fail.
 v.push(row1).unwrap();
@@ -57,7 +57,7 @@ For now data are stored in `.cache` (if using 'cache-dirs' feature) or `/tmp` un
 
 UUID V4 are generated in order to avoid collision when creating segment.
 
-```bash
+```txt
 ❯ ls /tmp/mmap-vec-rs -1
 /tmp/mmap-vec-rs/00d977bf-b556-475e-8de5-d35e7baaa39d.seg
 /tmp/mmap-vec-rs/6cb81228-9cf3-4918-a3ef-863907b32830.seg
@@ -77,7 +77,7 @@ __Nope__. I am not targeting this OS and would like to keep this crate as simple
 
 I also would like to reduce dependencies as much as possible.
 
-```bash
+```txt
 ❯ cargo tree
 mmap-vec v0.1.1
 ├── libc v0.2.147
