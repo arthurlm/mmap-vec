@@ -66,8 +66,8 @@ mod tests {
     #[test]
     fn test_uniqueness() {
         let builder = DefaultSegmentBuilder::default();
-        let path1 = builder.create_new_segment::<u8>(8).unwrap();
-        let path2 = builder.create_new_segment::<u8>(8).unwrap();
-        assert_ne!(path1.as_ptr(), path2.as_ptr());
+        let seg1 = builder.create_new_segment::<u8>(8).unwrap();
+        let seg2 = builder.create_new_segment::<u8>(8).unwrap();
+        assert_ne!(seg1.as_ptr(), seg2.as_ptr());
     }
 }
