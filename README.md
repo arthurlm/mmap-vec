@@ -1,5 +1,10 @@
 # Rust memory mapped vector
 
+[![CI Status](https://github.com/arthurlm/mmap-vec/workflows/Test/badge.svg)](https://github.com/arthurlm/mmap-vec/actions/)
+[![docs.rs](https://docs.rs/mmap-vec/badge.svg)](https://docs.rs/mmap-vec/)
+[![Crates.io](https://img.shields.io/crates/v/mmap-vec)](https://crates.io/crates/mmap-vec)
+[![LICENSE](https://img.shields.io/crates/l/mmap-vec)](https://raw.githubusercontent.com/arthurlm/mmap-vec/main/LICENSE)
+
 This crate contains implementation / helper to create data struct that are memory mapped.
 
 Sometime, you have to deal with vector / data that cannot fit in memory.

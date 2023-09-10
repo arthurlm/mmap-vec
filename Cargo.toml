@@ -6,6 +6,7 @@ authors = ["Arthur LE MOIGNE"]
 description = "Memory mapped vectors"
 license = "MIT"
 repository = "https://github.com/arthurlm/mmap-vec"
+documentation = "https://docs.rs/mmap-vec"
 keywords = ["mmap", "data-strucure"]
 categories = ["os::unix-apis", "data-structures", "memory-management"]
 exclude = ["tests/", ".github/"]
