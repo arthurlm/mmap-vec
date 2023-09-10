@@ -47,7 +47,13 @@ impl DefaultSegmentBuilder {
 
 impl Default for DefaultSegmentBuilder {
     fn default() -> Self {
-        let path = env::temp_dir().join("mmap-vec-rs");
+        #[cfg(not(feature = "cache-dir"))]
+        let mut path = env::temp_dir();
+        #[cfg(feature = "cache-dir")]
+        let mut path = dirs::cache_dir().unwrap_or_else(|| env::temp_dir());
+
+        path.push("mmap-vec-rs");
+
         let out = Self::with_path(path);
 
         // Ignore create dir fail

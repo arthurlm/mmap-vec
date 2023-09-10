@@ -51,9 +51,9 @@ The main idea here is to provide a basic `struct Segment`.
 This struct provides constant size memory mapped array of type `T`.
 Wrapping `Segment` into a new struct `MmapVec` that handle segment growth / shrink does the trick.
 
-> Where does the segment are store on disk ?
+### Where does the segment are store on disk ?
 
-For now data are stored in `/tmp` under a dedicated folder.
+For now data are stored in `.cache` (if using 'cache-dirs' feature) or `/tmp` under a dedicated folder.
 
 UUID V4 are generated in order to avoid collision when creating segment.
 
@@ -65,13 +65,13 @@ UUID V4 are generated in order to avoid collision when creating segment.
 /tmp/mmap-vec-rs/de62bde3-6524-4c4b-b514-24f6a44d6323.seg
 ```
 
-> Does segment creation is configurable ?
+### Does segment creation is configurable ?
 
 Yes ! Check out `test_custom_segment_creator::test_custom_segment_builder` for example.
 
 Since segment creation are manage through a trait. You are free to configure it the way you want.
 
-> Does this work on Windows ?
+### Does this work on Windows ?
 
 __Nope__. I am not targeting this OS and would like to keep this crate as simple as possible.
 
@@ -79,17 +79,22 @@ I also would like to reduce dependencies as much as possible.
 
 ```bash
 ❯ cargo tree
-mmap-vec v0.1.0
+mmap-vec v0.1.1
 ├── libc v0.2.147
-└── uuid v1.4.1
-    └── getrandom v0.2.10
-        ├── cfg-if v1.0.0
-        └── libc v0.2.147
+├── uuid v1.4.1
+|   └── getrandom v0.2.10
+|       ├── cfg-if v1.0.0
+|       └── libc v0.2.147
+# Optional using 'cache-dir' feature
+├── dirs v5.0.1
+│   └── dirs-sys v0.4.1
+│       ├── libc v0.2.147
+│       └── option-ext v0.2.0
 [dev-dependencies]
 └── glob v0.3.1
 ```
 
-> Is this crate production ready ?
+### Is this crate production ready ?
 
 Check TODO and DONE bellow for this 😁.
 
