@@ -141,3 +141,27 @@ fn test_clear() {
     assert_eq!(v.len(), 0);
     assert_eq!(counter.load(Ordering::Relaxed), 2);
 }
+
+#[test]
+fn test_equals() {
+    let mut s1 = MmapVec::<i32>::new();
+    let mut s2 = MmapVec::<i32>::new();
+
+    // Check when empty.
+    assert_eq!(s1, s2);
+
+    // Check with different size.
+    s1.push(42).unwrap();
+    s1.push(17).unwrap();
+    assert_ne!(s1, s2);
+
+    // Check equals again but with data this time.
+    s2.push(42).unwrap();
+    s2.push(17).unwrap();
+    assert_eq!(s1, s2);
+
+    // Check different data.
+    s1.push(15).unwrap();
+    s2.push(-15).unwrap();
+    assert_ne!(s1, s2);
+}

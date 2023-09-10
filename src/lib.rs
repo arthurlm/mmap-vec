@@ -247,3 +247,25 @@ where
         self.segment.deref_mut()
     }
 }
+
+impl<T, U, B1, B2> PartialEq<MmapVec<U, B2>> for MmapVec<T, B1>
+where
+    B1: SegmentBuilder,
+    B2: SegmentBuilder,
+    T: PartialEq<U>,
+{
+    fn eq(&self, other: &MmapVec<U, B2>) -> bool {
+        self[..] == other[..]
+    }
+
+    fn ne(&self, other: &MmapVec<U, B2>) -> bool {
+        self[..] != other[..]
+    }
+}
+
+impl<T, B> Eq for MmapVec<T, B>
+where
+    B: SegmentBuilder,
+    T: Eq,
+{
+}
