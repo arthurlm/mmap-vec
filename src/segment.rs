@@ -1,8 +1,6 @@
 use std::{
     fs::{self, OpenOptions},
-    io,
-    marker::PhantomData,
-    mem,
+    io, mem,
     ops::{Deref, DerefMut},
     os::{fd::AsRawFd, unix::prelude::FileExt},
     path::{Path, PathBuf},
@@ -16,11 +14,10 @@ use std::{
 /// It cannot growth / shrink.
 #[derive(Debug)]
 pub struct Segment<T> {
-    addr: *mut libc::c_void,
+    addr: *mut T,
     len: usize,
     capacity: usize,
     path: Option<PathBuf>,
-    _phantom: PhantomData<T>,
 }
 
 impl<T> Segment<T> {
@@ -31,7 +28,6 @@ impl<T> Segment<T> {
             len: 0,
             capacity: 0,
             path: None,
-            _phantom: PhantomData,
         }
     }
 
@@ -73,11 +69,10 @@ impl<T> Segment<T> {
             Err(io::Error::last_os_error())
         } else {
             Ok(Self {
-                addr,
+                addr: addr.cast(),
                 len: 0,
                 capacity,
                 path: Some(path.as_ref().to_path_buf()),
-                _phantom: PhantomData,
             })
         }
     }
@@ -96,8 +91,7 @@ impl<T> Segment<T> {
 
         unsafe {
             let remaining_len = self.len - new_len;
-            let items =
-                ptr::slice_from_raw_parts_mut(self.as_mut_ptr().add(new_len), remaining_len);
+            let items = ptr::slice_from_raw_parts_mut(self.addr.add(new_len), remaining_len);
             self.set_len(new_len);
             ptr::drop_in_place(items);
         }
@@ -106,7 +100,7 @@ impl<T> Segment<T> {
     /// Clears the segment, removing all values.
     pub fn clear(&mut self) {
         unsafe {
-            let items = slice::from_raw_parts_mut(self.addr as *mut T, self.len);
+            let items = slice::from_raw_parts_mut(self.addr, self.len);
             self.set_len(0);
             ptr::drop_in_place(items);
         }
@@ -133,7 +127,7 @@ impl<T> Segment<T> {
         }
 
         unsafe {
-            let dst = self.as_mut_ptr().add(self.len);
+            let dst = self.addr.add(self.len);
             ptr::write(dst, value);
         }
 
@@ -151,7 +145,7 @@ impl<T> Segment<T> {
 
         self.len -= 1;
         unsafe {
-            let src = self.as_ptr().add(self.len);
+            let src = self.addr.add(self.len);
             Some(ptr::read(src))
         }
     }
@@ -167,7 +161,7 @@ impl<T> Segment<T> {
         );
 
         unsafe {
-            ptr::copy(other.addr as *const T, self.addr as *mut T, other.capacity);
+            ptr::copy(other.addr, self.addr, other.capacity);
             self.set_len(other.len);
             other.set_len(0);
         };
@@ -178,22 +172,20 @@ impl<T> Deref for Segment<T> {
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
-        unsafe { slice::from_raw_parts(self.addr as *const T, self.len) }
+        unsafe { slice::from_raw_parts(self.addr, self.len) }
     }
 }
 
 impl<T> DerefMut for Segment<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { slice::from_raw_parts_mut(self.addr as *mut T, self.len) }
+        unsafe { slice::from_raw_parts_mut(self.addr, self.len) }
     }
 }
 
 impl<T> Drop for Segment<T> {
     fn drop(&mut self) {
         if self.len > 0 {
-            unsafe {
-                ptr::drop_in_place(ptr::slice_from_raw_parts_mut(self.as_mut_ptr(), self.len))
-            }
+            unsafe { ptr::drop_in_place(ptr::slice_from_raw_parts_mut(self.addr, self.len)) }
         }
 
         if self.capacity > 0 {
@@ -202,7 +194,7 @@ impl<T> Drop for Segment<T> {
             unsafe {
                 // Just use debug assert here, if `munmap` failed, we cannot do so much more ...
                 debug_assert!(
-                    libc::munmap(self.addr, self.capacity) == 0,
+                    libc::munmap(self.addr.cast(), self.capacity) == 0,
                     "munmap failed: {}",
                     io::Error::last_os_error()
                 );
