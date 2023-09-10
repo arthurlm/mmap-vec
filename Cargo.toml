@@ -5,7 +5,10 @@ edition = "2021"
 authors = ["Arthur LE MOIGNE"]
 description = "Memory mapped vectors"
 license = "MIT"
+repository = "https://github.com/arthurlm/mmap-vec"
 keywords = ["mmap", "data-strucure"]
+categories = ["os::unix-apis", "data-structures", "memory-management"]
+exclude = ["tests/", ".github/"]
 
 [dependencies]
 libc = "0.2.147"
