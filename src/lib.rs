@@ -219,6 +219,31 @@ where
     }
 }
 
+impl<T, B> MmapVec<T, B>
+where
+    B: SegmentBuilder + Clone,
+    T: Clone,
+{
+    /// Try cloning the vector.
+    ///
+    /// A new segment will be created for output vec.
+    /// Capacity of the new vec will be the same as source vec.
+    pub fn try_clone(&self) -> io::Result<Self> {
+        let mut other_segment = self.builder.create_new_segment(self.capacity())?;
+
+        // Bellow code could be optimize, but we have to deal with Clone implementation that can panic ...
+        for row in &self[..] {
+            // It is "safe" here to call panic on error since we already have reserved correct segment capacity.
+            assert!(other_segment.push_within_capacity(row.clone()).is_ok());
+        }
+
+        Ok(Self {
+            builder: self.builder.clone(),
+            segment: other_segment,
+        })
+    }
+}
+
 impl<T, B> Default for MmapVec<T, B>
 where
     B: SegmentBuilder,

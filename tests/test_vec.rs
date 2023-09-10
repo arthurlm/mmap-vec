@@ -165,3 +165,40 @@ fn test_equals() {
     s2.push(-15).unwrap();
     assert_ne!(s1, s2);
 }
+
+#[test]
+fn test_try_clone_null() {
+    let mut s1 = MmapVec::<i32>::default();
+    assert_eq!(s1.capacity(), 0);
+
+    // Clone and check equals !
+    let mut s2 = s1.try_clone().unwrap();
+    assert_eq!(s2.capacity(), 0);
+    assert_eq!(s1, s2);
+
+    // Push data and check segment are different.
+    s1.push(-8).unwrap();
+    s2.push(93).unwrap();
+
+    assert_eq!(&s1[..], [-8]);
+    assert_eq!(&s2[..], [93]);
+}
+
+#[test]
+fn test_try_clone_with_data() {
+    let mut s1 = MmapVec::<i32>::new();
+    s1.push(42).unwrap();
+    s1.push(17).unwrap();
+
+    // Clone and check equals !
+    let mut s2 = s1.try_clone().unwrap();
+    assert_eq!(s1, s2);
+    assert_eq!(&s1[..], [42, 17]);
+
+    // Push data and check segment are different.
+    s1.push(-8).unwrap();
+    s2.push(93).unwrap();
+
+    assert_eq!(&s1[..], [42, 17, -8]);
+    assert_eq!(&s2[..], [42, 17, 93]);
+}
