@@ -3,6 +3,20 @@ use std::{io, marker::PhantomData, mem};
 use crate::{utils::page_size, DefaultSegmentBuilder, MmapVec, SegmentBuilder};
 
 /// Helps to create vec with custom parameters.
+///
+/// Example usage:
+///
+/// ```rust
+/// # use mmap_vec::{DefaultSegmentBuilder, MmapVecBuilder};
+/// let seg_builder = DefaultSegmentBuilder::with_path("/tmp/rust-mmap");
+/// seg_builder.create_dir_all().expect("Fail to create mmap dir");
+///
+/// let vec = MmapVecBuilder::<usize>::new()
+///     .capacity(500)
+///     .segment_builder(seg_builder.clone())
+///     .try_build()
+///     .expect("Fail to create mmap vec");
+/// ```
 #[derive(Debug)]
 pub struct MmapVecBuilder<T, SB: SegmentBuilder = DefaultSegmentBuilder> {
     segment_builder: SB,

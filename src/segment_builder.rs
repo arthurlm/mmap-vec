@@ -14,7 +14,7 @@ pub trait SegmentBuilder: Default {
 }
 
 /// Default implementation for `SegmentBuilder` trait.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DefaultSegmentBuilder {
     store_path: PathBuf,
 }
