@@ -13,11 +13,7 @@ pub struct MmapVecBuilder<T, SB: SegmentBuilder = DefaultSegmentBuilder> {
 impl<T, SB: SegmentBuilder> MmapVecBuilder<T, SB> {
     /// Create new struct.
     pub fn new() -> Self {
-        Self {
-            segment_builder: Default::default(),
-            capacity: page_size() / mem::size_of::<T>(),
-            _phantom: PhantomData,
-        }
+        Self::default()
     }
 
     /// Update segment builder.
@@ -47,6 +43,10 @@ impl<T, SB: SegmentBuilder> MmapVecBuilder<T, SB> {
 
 impl<T, SB: SegmentBuilder> Default for MmapVecBuilder<T, SB> {
     fn default() -> Self {
-        Self::new()
+        Self {
+            segment_builder: SB::default(),
+            capacity: page_size() / mem::size_of::<T>(),
+            _phantom: PhantomData,
+        }
     }
 }
