@@ -30,7 +30,7 @@ let row1 = Row { id: 42, age: 18 };
 let row2 = Row { id: 894, age: 99 };
 
 // Create a memory mapped vec 😎
-let mut v = MmapVec::new();
+let mut v = MmapVec::<Row>::new();
 
 // Push can trigger new mmap segment creation, so it can fail.
 v.push(row1).unwrap();
@@ -139,7 +139,10 @@ pub struct MmapVec<T, B: SegmentBuilder = DefaultSegmentBuilder> {
     pub(crate) builder: B,
 }
 
-impl<T, B: SegmentBuilder> MmapVec<T, B> {
+impl<T, B> MmapVec<T, B>
+where
+    B: SegmentBuilder,
+{
     /// Create a zero size mmap vec.
     pub fn new() -> Self {
         Self {
@@ -216,13 +219,19 @@ impl<T, B: SegmentBuilder> MmapVec<T, B> {
     }
 }
 
-impl<T> Default for MmapVec<T> {
+impl<T, B> Default for MmapVec<T, B>
+where
+    B: SegmentBuilder,
+{
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<T> Deref for MmapVec<T> {
+impl<T, B> Deref for MmapVec<T, B>
+where
+    B: SegmentBuilder,
+{
     type Target = [T];
 
     fn deref(&self) -> &Self::Target {
@@ -230,7 +239,10 @@ impl<T> Deref for MmapVec<T> {
     }
 }
 
-impl<T> DerefMut for MmapVec<T> {
+impl<T, B> DerefMut for MmapVec<T, B>
+where
+    B: SegmentBuilder,
+{
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.segment.deref_mut()
     }
