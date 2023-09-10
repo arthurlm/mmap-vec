@@ -203,9 +203,10 @@ where
         }
 
         // Add new value to vec.
-        if self.push_within_capacity(value).is_err() {
-            panic!("Fail to push to newly created segment")
-        }
+        assert!(
+            self.push_within_capacity(value).is_ok(),
+            "Fail to push to newly created segment"
+        );
 
         Ok(())
     }
@@ -234,7 +235,10 @@ where
         // Bellow code could be optimize, but we have to deal with Clone implementation that can panic ...
         for row in &self[..] {
             // It is "safe" here to call panic on error since we already have reserved correct segment capacity.
-            assert!(other_segment.push_within_capacity(row.clone()).is_ok());
+            assert!(
+                other_segment.push_within_capacity(row.clone()).is_ok(),
+                "Fail to push to newly cloned segment"
+            );
         }
 
         Ok(Self {
