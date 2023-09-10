@@ -32,8 +32,10 @@ impl<T, SB: SegmentBuilder> MmapVecBuilder<T, SB> {
         self
     }
 
-    /// Create new vec
-    pub fn build(self) -> io::Result<MmapVec<T, SB>> {
+    /// Try building a new vec with given parameter.
+    ///
+    /// This function may failed if segment creation failed.
+    pub fn try_build(self) -> io::Result<MmapVec<T, SB>> {
         let segment = self.segment_builder.create_new_segment(self.capacity)?;
 
         Ok(MmapVec {

@@ -142,7 +142,7 @@ impl<T, B: SegmentBuilder> MmapVec<T, B> {
     ///
     /// This function can fail if FS / IO failed.
     pub fn with_capacity(capacity: usize) -> io::Result<Self> {
-        MmapVecBuilder::new().capacity(capacity).build()
+        MmapVecBuilder::new().capacity(capacity).try_build()
     }
 
     /// Currently used vec size.

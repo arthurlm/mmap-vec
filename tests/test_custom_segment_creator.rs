@@ -22,7 +22,7 @@ fn test_custom_segment_builder() {
     let mut v = MmapVecBuilder::new()
         .segment_builder(builder)
         .capacity(500)
-        .build()
+        .try_build()
         .unwrap();
 
     v.push(42).unwrap();
