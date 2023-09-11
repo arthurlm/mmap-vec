@@ -191,14 +191,16 @@ impl<T> Drop for Segment<T> {
         if self.capacity > 0 {
             assert!(!self.addr.is_null());
 
-            unsafe {
-                // Just use debug assert here, if `munmap` failed, we cannot do so much more ...
-                debug_assert!(
-                    libc::munmap(self.addr.cast(), self.capacity) == 0,
-                    "munmap failed: {}",
-                    io::Error::last_os_error()
-                );
-            }
+            let unmap_code =
+                unsafe { libc::munmap(self.addr.cast(), self.capacity * mem::size_of::<T>()) };
+
+            // Assert that munmap has not failed to force use it's return value and do not optimize out
+            // above call
+            assert!(
+                unmap_code == 0,
+                "munmap failed: {}",
+                io::Error::last_os_error()
+            );
         }
 
         if let Some(path) = &self.path {
