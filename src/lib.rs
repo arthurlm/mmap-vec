@@ -117,12 +117,14 @@ use std::{
 
 pub use segment::Segment;
 pub use segment_builder::{DefaultSegmentBuilder, SegmentBuilder};
+pub use stats::MmapStats;
 pub use vec_builder::MmapVecBuilder;
 
 use crate::utils::page_size;
 
 mod segment;
 mod segment_builder;
+mod stats;
 mod utils;
 mod vec_builder;
 

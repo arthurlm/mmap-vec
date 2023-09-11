@@ -5,7 +5,10 @@ use std::{
     os::{fd::AsRawFd, unix::prelude::FileExt},
     path::{Path, PathBuf},
     ptr, slice,
+    sync::atomic::Ordering,
 };
+
+use crate::stats::{COUNT_ACTIVE_SEGMENT, COUNT_MMAP_FAILED, COUNT_MUNMAP_FAILED};
 
 /// Segment is a constant slice of type T that is memory mapped to disk.
 ///
@@ -66,8 +69,10 @@ impl<T> Segment<T> {
         };
 
         if addr == libc::MAP_FAILED {
+            COUNT_MMAP_FAILED.fetch_add(1, Ordering::Relaxed);
             Err(io::Error::last_os_error())
         } else {
+            COUNT_ACTIVE_SEGMENT.fetch_add(1, Ordering::Relaxed);
             Ok(Self {
                 addr: addr.cast(),
                 len: 0,
@@ -194,13 +199,11 @@ impl<T> Drop for Segment<T> {
             let unmap_code =
                 unsafe { libc::munmap(self.addr.cast(), self.capacity * mem::size_of::<T>()) };
 
-            // Assert that munmap has not failed to force use it's return value and do not optimize out
-            // above call
-            assert!(
-                unmap_code == 0,
-                "munmap failed: {}",
-                io::Error::last_os_error()
-            );
+            if unmap_code == 0 {
+                COUNT_ACTIVE_SEGMENT.fetch_sub(1, Ordering::Relaxed);
+            } else {
+                COUNT_MUNMAP_FAILED.fetch_add(1, Ordering::Relaxed);
+            }
         }
 
         if let Some(path) = &self.path {
