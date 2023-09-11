@@ -1,3 +1,4 @@
+#![allow(clippy::partialeq_ne_impl)]
 #![warn(missing_docs)]
 #![deny(clippy::unwrap_used)]
 
