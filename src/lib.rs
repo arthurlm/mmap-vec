@@ -60,7 +60,7 @@ For now data are stored in `.cache` (if using 'cache-dirs' feature) or `/tmp` un
 
 UUID V4 are generated in order to avoid collision when creating segment.
 
-```txt
+```text
 ❯ ls /tmp/mmap-vec-rs -1
 /tmp/mmap-vec-rs/00d977bf-b556-475e-8de5-d35e7baaa39d.seg
 /tmp/mmap-vec-rs/6cb81228-9cf3-4918-a3ef-863907b32830.seg
@@ -80,7 +80,7 @@ __Nope__. I am not targeting this OS and would like to keep this crate as simple
 
 I also would like to reduce dependencies as much as possible.
 
-```txt
+```text
 ❯ cargo tree
 mmap-vec v0.1.1
 ├── libc v0.2.147
@@ -99,21 +99,15 @@ mmap-vec v0.1.1
 
 ### Is this crate production ready ?
 
-Check TODO and DONE bellow for this 😁.
+Yes 😁 !
+Since v0.1.1. But feature are a little bit limited for now ...
 
-## TODO & DONE
+Github PR to help on this are welcomed !
 
-- [ ] __production ready__ base code
-- [x] Unit tests
-- [x] Doc
-- [x] Configurable segment path creation
-- [ ] Serde support
-- [x] CI
-- [x] Crate deployment
-
-## Ideas ?
+## Ideas / new features ?
 
 - Implement custom `std::alloc::Allocator` to use with `std::vec::Vec`
+- Serde support
  */
 
 use std::{
