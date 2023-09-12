@@ -102,6 +102,26 @@ impl<T> Segment<T> {
         }
     }
 
+    /// Remove `delete_count` element at beginning of the segment.
+    ///
+    /// Element will be drop in place.
+    ///
+    /// If delete count is greater than the segment len, then this call will be
+    /// equivalent to calling `clear` function.
+    pub fn truncate_first(&mut self, delete_count: usize) {
+        let new_len = self.len.saturating_add_signed(-(delete_count as isize));
+        if new_len == 0 {
+            self.clear()
+        } else {
+            unsafe {
+                let items = slice::from_raw_parts_mut(self.addr, delete_count);
+                ptr::drop_in_place(items);
+                ptr::copy(self.addr.add(delete_count), self.addr, new_len);
+                self.set_len(new_len);
+            }
+        }
+    }
+
     /// Clears the segment, removing all values.
     pub fn clear(&mut self) {
         unsafe {

@@ -167,6 +167,33 @@ where
         self.segment.truncate(new_len);
     }
 
+    /// Remove `delete_count` element at beginning of the vec.
+    ///
+    /// Element will be drop in place.
+    ///
+    /// If delete count is greater than the segment len, then this call will be
+    /// equivalent to calling `clear` function.
+    ///
+    /// Example:
+    /// ```rust
+    /// # use mmap_vec::MmapVec;
+    /// let mut v = MmapVec::<u8>::new();
+    /// assert!(v.push(8).is_ok());
+    /// assert!(v.push(5).is_ok());
+    /// assert!(v.push(3).is_ok());
+    /// assert!(v.push(12).is_ok());
+    /// assert_eq!(&v[..], &[8, 5, 3, 12]);
+    ///
+    /// v.truncate_first(2);
+    /// assert_eq!(&v[..], [3, 12]);
+    ///
+    /// v.truncate_first(100);
+    /// assert_eq!(&v[..], []);
+    /// ```
+    pub fn truncate_first(&mut self, delete_count: usize) {
+        self.segment.truncate_first(delete_count);
+    }
+
     /// Clears the vec, removing all values.
     pub fn clear(&mut self) {
         self.segment.clear();

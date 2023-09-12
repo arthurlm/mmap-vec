@@ -122,6 +122,47 @@ fn test_truncate() {
 }
 
 #[test]
+fn test_truncate_first() {
+    fn build_vec() -> MmapVec<u8> {
+        let mut output = MmapVec::new();
+        assert!(output.push(8).is_ok());
+        assert!(output.push(5).is_ok());
+        assert!(output.push(3).is_ok());
+        assert!(output.push(12).is_ok());
+        assert_eq!(&output[..], &[8, 5, 3, 12]);
+        output
+    }
+
+    // Truncate 0
+    {
+        let mut v = build_vec();
+        v.truncate_first(0);
+        assert_eq!(&v[..], [8, 5, 3, 12]);
+    }
+
+    // Truncate half
+    {
+        let mut v = build_vec();
+        v.truncate_first(2);
+        assert_eq!(&v[..], [3, 12]);
+    }
+
+    // Truncate len
+    {
+        let mut v = build_vec();
+        v.truncate_first(v.len());
+        assert_eq!(&v[..], []);
+    }
+
+    // Truncate too much
+    {
+        let mut v = build_vec();
+        v.truncate_first(v.len() + 1000);
+        assert_eq!(&v[..], []);
+    }
+}
+
+#[test]
 fn test_clear() {
     let mut v = MmapVec::<DroppableRow>::new();
     let counter = Arc::new(AtomicU8::new(0));
