@@ -223,7 +223,7 @@ where
 
             // Copy previous data to new segment.
             let old_segment = mem::replace(&mut self.segment, new_segment);
-            self.segment.fill_from(old_segment);
+            self.segment.extend_from_segment(old_segment);
         }
 
         // Add new value to vec.

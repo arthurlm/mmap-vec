@@ -175,19 +175,36 @@ impl<T> Segment<T> {
         }
     }
 
-    /// Erase segment content with `other` segment argument.
-    pub fn fill_from(&mut self, mut other: Segment<T>) {
-        assert!(self.len == 0, "New segment contains already some data");
+    /// Move data contained in `other` segment to the end of current segment.
+    ///
+    /// ```rust
+    /// # use mmap_vec::Segment;
+    /// let mut s1 = Segment::<i32>::open_rw("test_extend_from_segment_1", 2).unwrap();
+    /// let mut s2 = Segment::<i32>::open_rw("test_extend_from_segment_2", 5).unwrap();
+    ///
+    /// s1.push_within_capacity(7);
+    /// s1.push_within_capacity(-3);
+    /// s2.push_within_capacity(-4);
+    /// s2.push_within_capacity(37);
+    ///
+    /// assert_eq!(&s1[..], [7, -3]);
+    /// assert_eq!(&s2[..], [-4, 37]);
+    ///
+    /// s2.extend_from_segment(s1);
+    /// assert_eq!(&s2[..], [-4, 37, 7, -3]);
+    /// ```
+    pub fn extend_from_segment(&mut self, mut other: Segment<T>) {
+        let new_len = other.len + self.len;
         assert!(
-            other.capacity < self.capacity,
-            "Copy segment size error (src: {}, dst: {})",
-            other.capacity,
+            new_len <= self.capacity,
+            "New segment is too small: new_len={}, capacity={}",
+            new_len,
             self.capacity
         );
 
         unsafe {
-            ptr::copy(other.addr, self.addr, other.capacity);
-            self.set_len(other.len);
+            ptr::copy_nonoverlapping(other.addr, self.addr.add(self.len), other.len);
+            self.set_len(new_len);
             other.set_len(0);
         };
     }

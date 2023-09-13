@@ -112,12 +112,11 @@ fn test_copy() {
     assert_eq!(&segment2[..], &[]);
 
     // Erase data in seg2.
-    segment2.fill_from(segment1);
+    segment2.extend_from_segment(segment1);
     assert_eq!(&segment2[..], &[ROW1, ROW2]);
 }
 
 #[test]
-#[should_panic]
 fn test_copy_already_filled() {
     let mut segment1 = Segment::open_rw("test_copy_already_filled_1", 2).unwrap();
     let mut segment2 = Segment::open_rw("test_copy_already_filled_2", 4).unwrap();
@@ -125,16 +124,22 @@ fn test_copy_already_filled() {
     assert_eq!(segment1.push_within_capacity(ROW1), Ok(()));
     assert_eq!(segment2.push_within_capacity(ROW2), Ok(()));
 
-    segment2.fill_from(segment1);
+    segment2.extend_from_segment(segment1);
+    assert_eq!(&segment2[..], &[ROW2, ROW1]);
 }
 
 #[test]
-#[should_panic]
+#[should_panic = "New segment is too small: new_len=4, capacity=3"]
 fn test_copy_bad_capacity() {
     let mut segment1 = Segment::<u8>::open_rw("test_copy_bad_capacity_1", 2).unwrap();
-    let segment2 = Segment::<u8>::open_rw("test_copy_bad_capacity_2", 4).unwrap();
+    let mut segment2 = Segment::<u8>::open_rw("test_copy_bad_capacity_2", 3).unwrap();
 
-    segment1.fill_from(segment2);
+    assert_eq!(segment1.push_within_capacity(0), Ok(()));
+    assert_eq!(segment1.push_within_capacity(0), Ok(()));
+    assert_eq!(segment2.push_within_capacity(0), Ok(()));
+    assert_eq!(segment2.push_within_capacity(0), Ok(()));
+
+    segment2.extend_from_segment(segment1);
 }
 
 #[test]
