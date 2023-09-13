@@ -243,3 +243,36 @@ fn test_try_clone_with_data() {
     assert_eq!(&s1[..], [42, 17, -8]);
     assert_eq!(&s2[..], [42, 17, 93]);
 }
+
+#[test]
+fn test_advice_prefetch() {
+    // Test prefetch with null
+    {
+        let v = MmapVec::<i32>::new();
+        v.advice_prefetch_all_pages();
+        v.advice_prefetch_page_at(0);
+        v.advice_prefetch_page_at(42);
+    }
+
+    // Test prefetch wih no data
+    {
+        let v = MmapVec::<i32>::new();
+        v.advice_prefetch_all_pages();
+        v.advice_prefetch_page_at(0);
+        v.advice_prefetch_page_at(18);
+        v.advice_prefetch_page_at(25);
+    }
+
+    // Test prefetch with data
+    {
+        let mut v = MmapVec::<i32>::new();
+        assert!(v.push(5).is_ok());
+        assert!(v.push(9).is_ok());
+        assert!(v.push(2).is_ok());
+        assert!(v.push(8).is_ok());
+        v.advice_prefetch_all_pages();
+        v.advice_prefetch_page_at(0);
+        v.advice_prefetch_page_at(18);
+        v.advice_prefetch_page_at(25);
+    }
+}

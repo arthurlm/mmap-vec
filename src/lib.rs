@@ -105,6 +105,8 @@ Since v0.1.1. But feature are a little bit limited for now ...
 
 Github PR to help on this are welcomed !
 
+Prefetching API is not fully stable for now and may change in the future.
+
 ## Ideas / new features ?
 
 - Implement custom `std::alloc::Allocator` to use with `std::vec::Vec`
@@ -241,6 +243,16 @@ where
     #[inline]
     pub fn push_within_capacity(&mut self, value: T) -> Result<(), T> {
         self.segment.push_within_capacity(value)
+    }
+
+    /// Inform the kernel that the complete segment will be access in a near future.
+    pub fn advice_prefetch_all_pages(&self) {
+        self.segment.advice_prefetch_all_pages()
+    }
+
+    /// Inform the kernel that underlying page for `index` will be access in a near future.
+    pub fn advice_prefetch_page_at(&self, index: usize) {
+        self.segment.advice_prefetch_page_at(index)
     }
 }
 

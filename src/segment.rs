@@ -8,7 +8,10 @@ use std::{
     sync::atomic::Ordering,
 };
 
-use crate::stats::{COUNT_ACTIVE_SEGMENT, COUNT_MMAP_FAILED, COUNT_MUNMAP_FAILED};
+use crate::{
+    stats::{COUNT_ACTIVE_SEGMENT, COUNT_MMAP_FAILED, COUNT_MUNMAP_FAILED},
+    utils::page_size,
+};
 
 /// Segment is a constant slice of type T that is memory mapped to disk.
 ///
@@ -207,6 +210,59 @@ impl<T> Segment<T> {
             self.set_len(new_len);
             other.set_len(0);
         };
+    }
+
+    /// Inform the kernel that the complete segment will be access in a near future.
+    ///
+    /// All underlying pages should be load in RAM.
+    ///
+    /// This function is only a wrapper above `libc::madvise`.
+    ///
+    /// Will panic if `libc::madvise` return an error.
+    pub fn advice_prefetch_all_pages(&self) {
+        if self.addr.is_null() || self.len == 0 {
+            return;
+        }
+
+        let madvise_code = unsafe {
+            libc::madvise(
+                self.addr.cast(),
+                self.len * mem::size_of::<T>(),
+                libc::MADV_WILLNEED,
+            )
+        };
+        assert_eq!(
+            madvise_code,
+            0,
+            "madvise error: {}",
+            io::Error::last_os_error()
+        );
+    }
+
+    /// Inform the kernel that underlying page for `index` will be access in a near future.
+    ///
+    /// This function is only a wrapper above `libc::madvise`.
+    pub fn advice_prefetch_page_at(&self, index: usize) {
+        if self.addr.is_null() || index >= self.len {
+            return;
+        }
+
+        let page_size = page_size();
+        let page_mask = !(page_size.wrapping_add_signed(-1));
+
+        let madvise_code = unsafe {
+            libc::madvise(
+                (self.addr.add(index) as usize & page_mask) as *mut libc::c_void,
+                page_size,
+                libc::MADV_WILLNEED,
+            )
+        };
+        assert_eq!(
+            madvise_code,
+            0,
+            "madvise error: {}",
+            io::Error::last_os_error()
+        );
     }
 }
 

@@ -101,6 +101,8 @@ Since v0.1.1. But feature are a little bit limited for now ...
 
 Github PR to help on this are welcomed !
 
+Prefetching API is not fully stable for now and may change in the future.
+
 ## Ideas / new features ?
 
 - Implement custom `std::alloc::Allocator` to use with `std::vec::Vec`

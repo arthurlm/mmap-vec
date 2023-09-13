@@ -370,3 +370,36 @@ fn test_clear() {
     assert_eq!(segment.len(), 0);
     assert_eq!(counter.load(Ordering::Relaxed), 2);
 }
+
+#[test]
+fn test_advice_prefetch() {
+    // Test prefetch with null
+    {
+        let segment = Segment::<i32>::null();
+        segment.advice_prefetch_all_pages();
+        segment.advice_prefetch_page_at(0);
+        segment.advice_prefetch_page_at(42);
+    }
+
+    // Test prefetch wih no data
+    {
+        let segment = Segment::<i32>::open_rw("test_advice_prefetch", 20).unwrap();
+        segment.advice_prefetch_all_pages();
+        segment.advice_prefetch_page_at(0);
+        segment.advice_prefetch_page_at(18);
+        segment.advice_prefetch_page_at(25);
+    }
+
+    // Test prefetch with data
+    {
+        let mut segment = Segment::<i32>::open_rw("test_advice_prefetch", 20).unwrap();
+        assert!(segment.push_within_capacity(5).is_ok());
+        assert!(segment.push_within_capacity(9).is_ok());
+        assert!(segment.push_within_capacity(2).is_ok());
+        assert!(segment.push_within_capacity(8).is_ok());
+        segment.advice_prefetch_all_pages();
+        segment.advice_prefetch_page_at(0);
+        segment.advice_prefetch_page_at(18);
+        segment.advice_prefetch_page_at(25);
+    }
+}
