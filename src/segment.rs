@@ -2,7 +2,7 @@ use std::{
     fs::{self, OpenOptions},
     io, mem,
     ops::{Deref, DerefMut},
-    os::{fd::AsRawFd, unix::prelude::FileExt},
+    os::fd::AsRawFd,
     path::{Path, PathBuf},
     ptr, slice,
     sync::atomic::Ordering,
@@ -51,15 +51,18 @@ impl<T> Segment<T> {
             .create(true)
             .open(&path)?;
 
-        // Write a 0 at end of file to force its existence
-        let segment_size = capacity * mem::size_of::<T>();
-        file.write_at(&[0], (segment_size - 1) as u64)?;
-
         // It is safe to not keep a reference to the initial file descriptor.
         // See: https://stackoverflow.com/questions/17490033/do-i-need-to-keep-a-file-open-after-calling-mmap-on-it
         let fd = file.as_raw_fd();
-        let offset = 0;
 
+        // Fill the file with 0
+        let segment_size = capacity * mem::size_of::<T>();
+        if unsafe { libc::ftruncate(fd, segment_size as libc::off_t) } != 0 {
+            COUNT_MMAP_FAILED.fetch_add(1, Ordering::Relaxed);
+            return Err(io::Error::last_os_error());
+        }
+
+        // Map the block
         let addr = unsafe {
             libc::mmap(
                 std::ptr::null_mut(),
@@ -67,7 +70,7 @@ impl<T> Segment<T> {
                 libc::PROT_READ | libc::PROT_WRITE,
                 libc::MAP_SHARED,
                 fd,
-                offset,
+                0,
             )
         };
 
