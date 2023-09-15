@@ -1,6 +1,7 @@
 # Rust memory mapped vector
 
 [![CI Status](https://github.com/arthurlm/mmap-vec/workflows/Test/badge.svg)](https://github.com/arthurlm/mmap-vec/actions/)
+[![codecov](https://codecov.io/gh/arthurlm/mmap-vec/graph/badge.svg?token=1TXRTK3C3Q)](https://codecov.io/gh/arthurlm/mmap-vec)
 [![docs.rs](https://docs.rs/mmap-vec/badge.svg)](https://docs.rs/mmap-vec/)
 [![Crates.io](https://img.shields.io/crates/v/mmap-vec)](https://crates.io/crates/mmap-vec)
 [![LICENSE](https://img.shields.io/crates/l/mmap-vec)](https://raw.githubusercontent.com/arthurlm/mmap-vec/main/LICENSE)
