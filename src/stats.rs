@@ -18,16 +18,19 @@ impl MmapStats {
     /// ```shell
     /// sysctl vm.max_map_count
     /// ```
+    #[inline(always)]
     pub fn active_segment(&self) -> u64 {
         COUNT_ACTIVE_SEGMENT.load(Ordering::Relaxed)
     }
 
     /// Get number of segment creation failed.
+    #[inline(always)]
     pub fn map_failed(&self) -> u64 {
         COUNT_MMAP_FAILED.load(Ordering::Relaxed)
     }
 
     /// Get number of segment deletion failed.
+    #[inline(always)]
     pub fn unmap_failed(&self) -> u64 {
         COUNT_MUNMAP_FAILED.load(Ordering::Relaxed)
     }

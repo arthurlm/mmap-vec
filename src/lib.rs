@@ -143,6 +143,7 @@ where
     B: SegmentBuilder,
 {
     /// Create a zero size mmap vec.
+    #[inline(always)]
     pub fn new() -> Self {
         Self {
             segment: Segment::null(),
@@ -153,18 +154,20 @@ where
     /// Create a mmap vec with a given capacity.
     ///
     /// This function can fail if FS / IO failed.
+    #[inline(always)]
     pub fn with_capacity(capacity: usize) -> io::Result<Self> {
         MmapVecBuilder::new().capacity(capacity).try_build()
     }
 
     /// Currently used vec size.
-    #[inline]
+    #[inline(always)]
     pub fn capacity(&self) -> usize {
         self.segment.capacity()
     }
 
     /// Shortens the vec, keeping the first `new_len` elements and dropping
     /// the rest.
+    #[inline(always)]
     pub fn truncate(&mut self, new_len: usize) {
         self.segment.truncate(new_len);
     }
@@ -192,11 +195,13 @@ where
     /// v.truncate_first(100);
     /// assert_eq!(&v[..], []);
     /// ```
+    #[inline(always)]
     pub fn truncate_first(&mut self, delete_count: usize) {
         self.segment.truncate_first(delete_count);
     }
 
     /// Clears the vec, removing all values.
+    #[inline(always)]
     pub fn clear(&mut self) {
         self.segment.clear();
     }
@@ -204,7 +209,7 @@ where
     /// Remove last value of the vec.
     ///
     /// Value will be return if data structure is not empty.
-    #[inline]
+    #[inline(always)]
     pub fn pop(&mut self) -> Option<T> {
         self.segment.pop()
     }
@@ -240,17 +245,19 @@ where
     /// Try to push a new value to the data structure.
     ///
     /// If vec is too small, value will be return as an `Err`.
-    #[inline]
+    #[inline(always)]
     pub fn push_within_capacity(&mut self, value: T) -> Result<(), T> {
         self.segment.push_within_capacity(value)
     }
 
     /// Inform the kernel that the complete segment will be access in a near future.
+    #[inline(always)]
     pub fn advice_prefetch_all_pages(&self) {
         self.segment.advice_prefetch_all_pages()
     }
 
     /// Inform the kernel that underlying page for `index` will be access in a near future.
+    #[inline(always)]
     pub fn advice_prefetch_page_at(&self, index: usize) {
         self.segment.advice_prefetch_page_at(index)
     }
@@ -288,6 +295,7 @@ impl<T, B> Default for MmapVec<T, B>
 where
     B: SegmentBuilder,
 {
+    #[inline(always)]
     fn default() -> Self {
         Self::new()
     }
@@ -299,6 +307,7 @@ where
 {
     type Target = [T];
 
+    #[inline(always)]
     fn deref(&self) -> &Self::Target {
         self.segment.deref()
     }
@@ -308,6 +317,7 @@ impl<T, B> DerefMut for MmapVec<T, B>
 where
     B: SegmentBuilder,
 {
+    #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.segment.deref_mut()
     }
@@ -319,10 +329,12 @@ where
     B2: SegmentBuilder,
     T: PartialEq<U>,
 {
+    #[inline(always)]
     fn eq(&self, other: &MmapVec<U, B2>) -> bool {
         self[..] == other[..]
     }
 
+    #[inline(always)]
     fn ne(&self, other: &MmapVec<U, B2>) -> bool {
         self[..] != other[..]
     }

@@ -28,6 +28,7 @@ pub struct Segment<T> {
 
 impl<T> Segment<T> {
     /// Create a zero size segment.
+    #[inline(always)]
     pub const fn null() -> Self {
         Self {
             addr: std::ptr::null_mut(),
@@ -65,6 +66,7 @@ impl<T> Segment<T> {
     }
 
     /// Currently used segment size.
+    #[inline(always)]
     pub fn capacity(&self) -> usize {
         self.capacity
     }
@@ -105,6 +107,7 @@ impl<T> Segment<T> {
     }
 
     /// Clears the segment, removing all values.
+    #[inline]
     pub fn clear(&mut self) {
         unsafe {
             let items = slice::from_raw_parts_mut(self.addr, self.len);
@@ -115,12 +118,14 @@ impl<T> Segment<T> {
 
     /// Forces the length of the segment to `new_len`.
     #[allow(clippy::missing_safety_doc)]
+    #[inline(always)]
     pub unsafe fn set_len(&mut self, new_len: usize) {
         debug_assert!(new_len <= self.capacity());
         self.len = new_len;
     }
 
     /// Bytes use on disk for this segment.
+    #[inline(always)]
     pub fn disk_size(&self) -> usize {
         self.capacity * mem::size_of::<T>()
     }
@@ -128,6 +133,7 @@ impl<T> Segment<T> {
     /// Try to add new element to the segment.
     ///
     /// If the segment is already full, value will be return in `Err`.
+    #[inline]
     pub fn push_within_capacity(&mut self, value: T) -> Result<(), T> {
         if self.len == self.capacity {
             return Err(value);
@@ -145,6 +151,7 @@ impl<T> Segment<T> {
     /// Remove last element of the segment and reduce its capacity.
     ///
     /// Value will be return if segment is not empty.
+    #[inline]
     pub fn pop(&mut self) -> Option<T> {
         if self.len == 0 {
             return None;
@@ -248,12 +255,14 @@ impl<T> Segment<T> {
 impl<T> Deref for Segment<T> {
     type Target = [T];
 
+    #[inline(always)]
     fn deref(&self) -> &Self::Target {
         unsafe { slice::from_raw_parts(self.addr, self.len) }
     }
 }
 
 impl<T> DerefMut for Segment<T> {
+    #[inline(always)]
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { slice::from_raw_parts_mut(self.addr, self.len) }
     }

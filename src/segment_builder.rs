@@ -33,6 +33,7 @@ impl DefaultSegmentBuilder {
     /// this work.
     ///
     /// In case folder does not exists segment creation may failed.
+    #[inline(always)]
     pub fn with_path<P: AsRef<Path>>(store_path: P) -> Self {
         Self {
             store_path: Arc::new(store_path.as_ref().to_path_buf()),
@@ -40,6 +41,7 @@ impl DefaultSegmentBuilder {
     }
 
     /// Make sure store folder exists.
+    #[inline]
     pub fn create_dir_all(&self) -> io::Result<()> {
         fs::create_dir_all(self.store_path.as_ref())
     }
