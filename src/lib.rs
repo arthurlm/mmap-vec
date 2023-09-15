@@ -118,12 +118,15 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+pub use error::MmapVecError;
 pub use segment::Segment;
 pub use segment_builder::{DefaultSegmentBuilder, SegmentBuilder};
 pub use stats::MmapStats;
 pub use vec_builder::MmapVecBuilder;
 
 use crate::utils::page_size;
+
+pub mod error;
 
 mod segment;
 mod segment_builder;
@@ -248,6 +251,23 @@ where
     #[inline(always)]
     pub fn push_within_capacity(&mut self, value: T) -> Result<(), T> {
         self.segment.push_within_capacity(value)
+    }
+
+    /// Resize the vec without copying data.
+    ///
+    /// For implementation details please check doc of `Segment::reserve_in_place`.
+    ///
+    /// # Safety
+    ///
+    /// If there is an I/O error after un-mapping the segment, then drop will never have been called on unmapped data.
+    ///
+    /// This can happen for example if disk is full.
+    ///
+    /// If no special treatment has to be done when dropping data, this function can be considered as "safe".
+    /// This function can significantly improve performances in the case data are "simple".
+    #[inline(always)]
+    pub unsafe fn reserve_in_place(&mut self, additional: usize) -> Result<(), MmapVecError> {
+        self.segment.reserve_in_place(additional)
     }
 
     /// Inform the kernel that the complete segment will be access in a near future.
