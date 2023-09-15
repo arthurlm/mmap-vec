@@ -1,5 +1,5 @@
 use std::{
-    fs::{self, OpenOptions},
+    fs::{self, File, OpenOptions},
     io, mem,
     ops::{Deref, DerefMut},
     os::fd::AsRawFd,
@@ -51,41 +51,17 @@ impl<T> Segment<T> {
             .create(true)
             .open(&path)?;
 
-        // It is safe to not keep a reference to the initial file descriptor.
-        // See: https://stackoverflow.com/questions/17490033/do-i-need-to-keep-a-file-open-after-calling-mmap-on-it
-        let fd = file.as_raw_fd();
-
         // Fill the file with 0
-        let segment_size = capacity * mem::size_of::<T>();
-        if unsafe { libc::ftruncate(fd, segment_size as libc::off_t) } != 0 {
-            COUNT_MMAP_FAILED.fetch_add(1, Ordering::Relaxed);
-            return Err(io::Error::last_os_error());
-        }
+        unsafe { ftruncate::<T>(&file, capacity) }?;
 
         // Map the block
-        let addr = unsafe {
-            libc::mmap(
-                std::ptr::null_mut(),
-                segment_size as libc::size_t,
-                libc::PROT_READ | libc::PROT_WRITE,
-                libc::MAP_SHARED,
-                fd,
-                0,
-            )
-        };
-
-        if addr == libc::MAP_FAILED {
-            COUNT_MMAP_FAILED.fetch_add(1, Ordering::Relaxed);
-            Err(io::Error::last_os_error())
-        } else {
-            COUNT_ACTIVE_SEGMENT.fetch_add(1, Ordering::Relaxed);
-            Ok(Self {
-                addr: addr.cast(),
-                len: 0,
-                capacity,
-                path: Some(path.as_ref().to_path_buf()),
-            })
-        }
+        let addr = unsafe { mmap(&file, capacity) }?;
+        Ok(Self {
+            addr,
+            len: 0,
+            capacity,
+            path: Some(path.as_ref().to_path_buf()),
+        })
     }
 
     /// Currently used segment size.
@@ -290,16 +266,7 @@ impl<T> Drop for Segment<T> {
         }
 
         if self.capacity > 0 {
-            assert!(!self.addr.is_null());
-
-            let unmap_code =
-                unsafe { libc::munmap(self.addr.cast(), self.capacity * mem::size_of::<T>()) };
-
-            if unmap_code == 0 {
-                COUNT_ACTIVE_SEGMENT.fetch_sub(1, Ordering::Relaxed);
-            } else {
-                COUNT_MUNMAP_FAILED.fetch_add(1, Ordering::Relaxed);
-            }
+            let _ = unsafe { munmap(self.addr, self.capacity) };
         }
 
         if let Some(path) = &self.path {
@@ -310,3 +277,55 @@ impl<T> Drop for Segment<T> {
 
 unsafe impl<T> Send for Segment<T> {}
 unsafe impl<T> Sync for Segment<T> {}
+
+unsafe fn ftruncate<T>(file: &File, capacity: usize) -> io::Result<()> {
+    let segment_size = capacity * mem::size_of::<T>();
+    let fd = file.as_raw_fd();
+
+    if libc::ftruncate(fd, segment_size as libc::off_t) != 0 {
+        COUNT_MMAP_FAILED.fetch_add(1, Ordering::Relaxed);
+        return Err(io::Error::last_os_error());
+    } else {
+        Ok(())
+    }
+}
+
+unsafe fn mmap<T>(file: &File, capacity: usize) -> io::Result<*mut T> {
+    let segment_size = capacity * mem::size_of::<T>();
+
+    // It is safe to not keep a reference to the initial file descriptor.
+    // See: https://stackoverflow.com/questions/17490033/do-i-need-to-keep-a-file-open-after-calling-mmap-on-it
+    let fd = file.as_raw_fd();
+
+    let addr = libc::mmap(
+        std::ptr::null_mut(),
+        segment_size as libc::size_t,
+        libc::PROT_READ | libc::PROT_WRITE,
+        libc::MAP_SHARED,
+        fd,
+        0,
+    );
+
+    if addr == libc::MAP_FAILED {
+        COUNT_MMAP_FAILED.fetch_add(1, Ordering::Relaxed);
+        Err(io::Error::last_os_error())
+    } else {
+        COUNT_ACTIVE_SEGMENT.fetch_add(1, Ordering::Relaxed);
+        Ok(addr.cast())
+    }
+}
+
+unsafe fn munmap<T>(addr: *mut T, capacity: usize) -> io::Result<()> {
+    debug_assert!(!addr.is_null());
+    debug_assert!(capacity > 0);
+
+    let unmap_code = libc::munmap(addr.cast(), capacity * mem::size_of::<T>());
+
+    if unmap_code != 0 {
+        COUNT_MUNMAP_FAILED.fetch_add(1, Ordering::Relaxed);
+        Err(io::Error::last_os_error())
+    } else {
+        COUNT_ACTIVE_SEGMENT.fetch_sub(1, Ordering::Relaxed);
+        Ok(())
+    }
+}
