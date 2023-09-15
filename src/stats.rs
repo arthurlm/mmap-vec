@@ -1,6 +1,7 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
 pub(crate) static COUNT_ACTIVE_SEGMENT: AtomicU64 = AtomicU64::new(0);
+pub(crate) static COUNT_FTRUNCATE_FAILED: AtomicU64 = AtomicU64::new(0);
 pub(crate) static COUNT_MMAP_FAILED: AtomicU64 = AtomicU64::new(0);
 pub(crate) static COUNT_MUNMAP_FAILED: AtomicU64 = AtomicU64::new(0);
 
@@ -21,6 +22,12 @@ impl MmapStats {
     #[inline(always)]
     pub fn active_segment(&self) -> u64 {
         COUNT_ACTIVE_SEGMENT.load(Ordering::Relaxed)
+    }
+
+    /// Get number of file truncate failed.
+    #[inline(always)]
+    pub fn ftruncate_failed(&self) -> u64 {
+        COUNT_FTRUNCATE_FAILED.load(Ordering::Relaxed)
     }
 
     /// Get number of segment creation failed.

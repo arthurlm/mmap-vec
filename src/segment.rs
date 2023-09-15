@@ -9,7 +9,7 @@ use std::{
 };
 
 use crate::{
-    stats::{COUNT_ACTIVE_SEGMENT, COUNT_MMAP_FAILED, COUNT_MUNMAP_FAILED},
+    stats::{COUNT_ACTIVE_SEGMENT, COUNT_FTRUNCATE_FAILED, COUNT_MMAP_FAILED, COUNT_MUNMAP_FAILED},
     utils::page_size,
 };
 
@@ -292,8 +292,8 @@ unsafe fn ftruncate<T>(file: &File, capacity: usize) -> io::Result<()> {
     let fd = file.as_raw_fd();
 
     if libc::ftruncate(fd, segment_size as libc::off_t) != 0 {
-        COUNT_MMAP_FAILED.fetch_add(1, Ordering::Relaxed);
-        return Err(io::Error::last_os_error());
+        COUNT_FTRUNCATE_FAILED.fetch_add(1, Ordering::Relaxed);
+        Err(io::Error::last_os_error())
     } else {
         Ok(())
     }
