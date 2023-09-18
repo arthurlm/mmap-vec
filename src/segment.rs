@@ -230,9 +230,11 @@ impl<T> Segment<T> {
             // Extract address from inner struct.
             // If one of the following call fail, it will avoid multiple free / accessing un-mapped region.
             let addr = mem::replace(&mut self.addr, ptr::null_mut());
+            let capacity = mem::replace(&mut self.capacity, 0);
+            let len = mem::replace(&mut self.len, 0);
 
             // unmap region
-            munmap(addr, self.capacity)?;
+            munmap(addr, capacity)?;
 
             // Grow file
             let file = OpenOptions::new()
@@ -246,6 +248,7 @@ impl<T> Segment<T> {
             // Re-map region
             self.addr = mmap(&file, new_capacity)?;
             self.capacity = new_capacity;
+            self.len = len;
         }
 
         Ok(())
