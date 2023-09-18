@@ -7,7 +7,7 @@ use std::{
     },
 };
 
-use mmap_vec::Segment;
+use mmap_vec::{MmapVecError, Segment};
 
 pub use data_gen::*;
 
@@ -412,7 +412,10 @@ fn test_reserve_in_place() {
     {
         let mut s = Segment::<i32>::null();
         unsafe {
-            assert!(s.reserve_in_place(50).is_err());
+            assert_eq!(
+                s.reserve_in_place(50),
+                Err(MmapVecError::MissingSegmentPath)
+            );
         }
     }
 
