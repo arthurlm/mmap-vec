@@ -1,4 +1,7 @@
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::{
+    fmt,
+    sync::atomic::{AtomicU64, Ordering},
+};
 
 pub(crate) static COUNT_ACTIVE_SEGMENT: AtomicU64 = AtomicU64::new(0);
 pub(crate) static COUNT_FTRUNCATE_FAILED: AtomicU64 = AtomicU64::new(0);
@@ -9,8 +12,19 @@ pub(crate) static COUNT_MUNMAP_FAILED: AtomicU64 = AtomicU64::new(0);
 ///
 /// This stats can be useful to debug or to export in various monitoring
 /// systems.
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct MmapStats;
+
+impl fmt::Debug for MmapStats {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("MmapStats")
+            .field("active", &self.active_segment())
+            .field("ftruncate_failed", &self.ftruncate_failed())
+            .field("map_failed", &self.map_failed())
+            .field("unmap_failed", &self.unmap_failed())
+            .finish()
+    }
+}
 
 impl MmapStats {
     /// Get number of current segment mounted by this library.
