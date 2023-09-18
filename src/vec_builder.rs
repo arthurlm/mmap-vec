@@ -17,7 +17,6 @@ use crate::{utils::page_size, DefaultSegmentBuilder, MmapVec, SegmentBuilder};
 ///     .try_build()
 ///     .expect("Fail to create mmap vec");
 /// ```
-#[derive(Debug)]
 pub struct MmapVecBuilder<T, SB: SegmentBuilder = DefaultSegmentBuilder> {
     segment_builder: SB,
     capacity: usize,

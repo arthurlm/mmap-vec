@@ -467,3 +467,12 @@ fn test_reserve_in_place() {
         assert_eq!(s.disk_size(), 3 * PAGE_SIZE);
     }
 }
+
+#[test]
+fn test_debug() {
+    let s = Segment::<u8>::null();
+    assert_eq!(
+        format!("{s:?}"),
+        "Segment { addr: 0x0, len: 0, capacity: 0, path: None }"
+    );
+}
