@@ -228,27 +228,26 @@ where
 
     /// Append a value to the vec.
     ///
-    /// If vec is too small, new segment will be created.
-    /// Data will then be moved to new segment.
+    /// If vec is too small:
+    /// - new segment may be created.
+    /// - current segment may be resize.
     ///
     /// This is why this function can fail, because it depends on FS / IO calls.
-    pub fn push(&mut self, value: T) -> io::Result<()> {
-        // Check if we need to growth inner segment.
-        if self.segment.len() == self.segment.capacity() {
+    pub fn push(&mut self, value: T) -> Result<(), MmapVecError> {
+        // If segment is null, init one
+        if self.segment.capacity() == 0 {
             let min_capacity = page_size() / mem::size_of::<T>();
-            let new_capacity = std::cmp::max(self.segment.capacity() * 2, min_capacity);
-            let (new_segment, new_path) = self.builder.create_new_segment::<T>(new_capacity)?;
+            let (new_segment, new_path) = self.builder.create_new_segment::<T>(min_capacity)?;
             debug_assert!(new_segment.capacity() > self.segment.capacity());
 
-            // Copy previous data to new segment.
             let old_segment = mem::replace(&mut self.segment, new_segment);
             let old_path = mem::replace(&mut self.path, Some(new_path));
-            self.segment.extend_from_segment(old_segment);
-
-            if let Some(path) = old_path {
-                let _ = fs::remove_file(path);
-            }
+            debug_assert!(old_segment.addr.is_null());
+            debug_assert!(old_path.is_none());
         }
+
+        // Otherwise reserve some space for new data
+        self.reserve(1)?;
 
         // Add new value to vec.
         assert!(
@@ -337,6 +336,10 @@ where
     /// A new segment will be created for output vec.
     /// Capacity of the new vec will be the same as source vec.
     pub fn try_clone(&self) -> io::Result<Self> {
+        if self.len() == 0 {
+            return Ok(Self::default());
+        }
+
         let (mut other_segment, other_path) = self.builder.create_new_segment(self.capacity())?;
 
         // Bellow code could be optimize, but we have to deal with Clone implementation that can panic ...
