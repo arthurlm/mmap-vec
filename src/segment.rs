@@ -166,8 +166,8 @@ impl<T> Segment<T> {
     ///
     /// ```rust
     /// # use mmap_vec::Segment;
-    /// let mut s1 = Segment::<i32>::open_rw("test_extend_from_segment_1", 2).unwrap();
-    /// let mut s2 = Segment::<i32>::open_rw("test_extend_from_segment_2", 5).unwrap();
+    /// let mut s1 = Segment::<i32>::open_rw("test_extend_from_segment_1.seg", 2).unwrap();
+    /// let mut s2 = Segment::<i32>::open_rw("test_extend_from_segment_2.seg", 5).unwrap();
     ///
     /// s1.push_within_capacity(7);
     /// s1.push_within_capacity(-3);
