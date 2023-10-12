@@ -3,7 +3,7 @@ use std::sync::{
     Arc,
 };
 
-use mmap_vec::MmapVec;
+use mmap_vec::{MmapVec, MmapVecError};
 
 pub use data_gen::*;
 
@@ -275,4 +275,80 @@ fn test_advice_prefetch() {
         v.advice_prefetch_page_at(18);
         v.advice_prefetch_page_at(25);
     }
+}
+
+#[test]
+fn test_reserve_in_place() {
+    const PAGE_SIZE: usize = 4096;
+
+    // Test on null segment
+    {
+        let mut s = MmapVec::<i32>::new();
+        unsafe {
+            assert_eq!(
+                s.reserve_in_place(50),
+                Err(MmapVecError::MissingSegmentPath)
+            );
+        }
+    }
+
+    // Test on valid segment with free space
+    {
+        let mut s = MmapVec::<i32>::with_capacity(100).unwrap();
+        assert_eq!(s.capacity(), 100);
+
+        unsafe {
+            assert!(s.reserve_in_place(50).is_ok());
+        }
+        assert_eq!(s.capacity(), 100);
+    }
+
+    // Test on valid segment with free space
+    {
+        // Fill the vec
+        let mut s = MmapVec::<i32>::with_capacity(100).unwrap();
+        assert_eq!(s.capacity(), 100);
+
+        // Reserve few bytes and check rounding
+        while s.len() < s.capacity() {
+            assert_eq!(s.push_within_capacity(0), Ok(()));
+        }
+        unsafe {
+            assert!(s.reserve_in_place(50).is_ok());
+        }
+        assert_eq!(s.capacity(), 1024);
+        assert_eq!(s.disk_size(), PAGE_SIZE);
+
+        // Reserve one full page
+        while s.len() < s.capacity() {
+            assert_eq!(s.push_within_capacity(0), Ok(()));
+        }
+        unsafe {
+            assert!(s.reserve_in_place(1024).is_ok());
+        }
+        assert_eq!(s.capacity(), 2048);
+        assert_eq!(s.disk_size(), 2 * PAGE_SIZE);
+
+        // Reserve a single byte
+        while s.len() < s.capacity() {
+            assert_eq!(s.push_within_capacity(0), Ok(()));
+        }
+        unsafe {
+            assert!(s.reserve_in_place(1).is_ok());
+        }
+        assert_eq!(s.capacity(), 3072);
+        assert_eq!(s.disk_size(), 3 * PAGE_SIZE);
+    }
+}
+
+#[test]
+fn test_drop_file() {
+    // Create vec.
+    let vec = MmapVec::<i32>::with_capacity(100).unwrap();
+    let path = vec.path().unwrap();
+    assert!(path.exists());
+
+    // Drop vec and check file as been removed.
+    drop(vec);
+    assert!(!path.exists());
 }

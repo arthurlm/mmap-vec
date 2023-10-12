@@ -48,11 +48,12 @@ impl<T, SB: SegmentBuilder> MmapVecBuilder<T, SB> {
     ///
     /// This function may failed if segment creation failed.
     pub fn try_build(self) -> io::Result<MmapVec<T, SB>> {
-        let segment = self.segment_builder.create_new_segment(self.capacity)?;
+        let (segment, path) = self.segment_builder.create_new_segment(self.capacity)?;
 
         Ok(MmapVec {
             segment,
             builder: self.segment_builder,
+            path: Some(path),
         })
     }
 }

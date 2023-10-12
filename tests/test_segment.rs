@@ -1,13 +1,9 @@
-use std::{
-    fs,
-    path::PathBuf,
-    sync::{
-        atomic::{AtomicU8, Ordering},
-        Arc,
-    },
+use std::sync::{
+    atomic::{AtomicU8, Ordering},
+    Arc,
 };
 
-use mmap_vec::{MmapVecError, Segment};
+use mmap_vec::Segment;
 
 pub use data_gen::*;
 
@@ -82,26 +78,9 @@ fn test_open_valid_segment() {
 }
 
 #[test]
-fn test_drop_file() {
-    let path: PathBuf = "test_drop_file.seg".into();
-
-    // Remove pre-test files.
-    let _ = fs::remove_file(&path);
-    assert!(!path.exists());
-
-    // Create segment.
-    let segment = Segment::<DataRow>::open_rw(&path, 3).unwrap();
-    assert!(path.exists());
-
-    // Drop segment and check file as been removed.
-    drop(segment);
-    assert!(!path.exists());
-}
-
-#[test]
 fn test_copy() {
-    let mut segment1 = Segment::open_rw("test_copy_1", 2).unwrap();
-    let mut segment2 = Segment::open_rw("test_copy_2", 4).unwrap();
+    let mut segment1 = Segment::open_rw("test_copy_1.seg", 2).unwrap();
+    let mut segment2 = Segment::open_rw("test_copy_2.seg", 4).unwrap();
 
     // Init and check segments.
     assert_eq!(segment1.push_within_capacity(ROW1), Ok(()));
@@ -118,8 +97,8 @@ fn test_copy() {
 
 #[test]
 fn test_copy_already_filled() {
-    let mut segment1 = Segment::open_rw("test_copy_already_filled_1", 2).unwrap();
-    let mut segment2 = Segment::open_rw("test_copy_already_filled_2", 4).unwrap();
+    let mut segment1 = Segment::open_rw("test_copy_already_filled_1.seg", 2).unwrap();
+    let mut segment2 = Segment::open_rw("test_copy_already_filled_2.seg", 4).unwrap();
 
     assert_eq!(segment1.push_within_capacity(ROW1), Ok(()));
     assert_eq!(segment2.push_within_capacity(ROW2), Ok(()));
@@ -131,8 +110,8 @@ fn test_copy_already_filled() {
 #[test]
 #[should_panic = "New segment is too small: new_len=4, capacity=3"]
 fn test_copy_bad_capacity() {
-    let mut segment1 = Segment::<u8>::open_rw("test_copy_bad_capacity_1", 2).unwrap();
-    let mut segment2 = Segment::<u8>::open_rw("test_copy_bad_capacity_2", 3).unwrap();
+    let mut segment1 = Segment::<u8>::open_rw("test_copy_bad_capacity_1.seg", 2).unwrap();
+    let mut segment2 = Segment::<u8>::open_rw("test_copy_bad_capacity_2.seg", 3).unwrap();
 
     assert_eq!(segment1.push_within_capacity(0), Ok(()));
     assert_eq!(segment1.push_within_capacity(0), Ok(()));
@@ -144,7 +123,7 @@ fn test_copy_bad_capacity() {
 
 #[test]
 fn test_drop() {
-    let mut segment = Segment::<DroppableRow>::open_rw("test_drop", 5).unwrap();
+    let mut segment = Segment::<DroppableRow>::open_rw("test_drop.seg", 5).unwrap();
     let counter = Arc::new(AtomicU8::new(0));
 
     // Check push / pull inc
@@ -168,7 +147,7 @@ fn test_drop() {
 
 #[test]
 fn test_truncate() {
-    let mut segment = Segment::<DroppableRow>::open_rw("test_truncate", 5).unwrap();
+    let mut segment = Segment::<DroppableRow>::open_rw("test_truncate.seg", 5).unwrap();
     let counter = Arc::new(AtomicU8::new(0));
 
     assert!(segment
@@ -207,7 +186,7 @@ fn test_truncate() {
 fn test_truncate_first() {
     // Truncate on empty segment
     {
-        let mut segment = Segment::<u8>::open_rw("test_truncate_first", 5).unwrap();
+        let mut segment = Segment::<u8>::open_rw("test_truncate_first.seg", 5).unwrap();
         assert_eq!(&segment[..], []);
 
         segment.truncate_first(0);
@@ -221,7 +200,7 @@ fn test_truncate_first() {
     }
 
     fn build_test_seg() -> Segment<u8> {
-        let mut segment = Segment::<u8>::open_rw("test_truncate_first", 5).unwrap();
+        let mut segment = Segment::<u8>::open_rw("test_truncate_first.seg", 5).unwrap();
         segment.push_within_capacity(1).unwrap();
         segment.push_within_capacity(2).unwrap();
         segment.push_within_capacity(6).unwrap();
@@ -273,7 +252,7 @@ fn test_drop_with_truncate_first() {
     fn build_test_seg(counter: Arc<AtomicU8>) -> Segment<DroppableRow> {
         counter.store(0, Ordering::Relaxed);
 
-        let mut segment = Segment::open_rw("test_drop_with_truncate_first", 5).unwrap();
+        let mut segment = Segment::open_rw("test_drop_with_truncate_first.seg", 5).unwrap();
         segment
             .push_within_capacity(DroppableRow::new(counter.clone()))
             .unwrap();
@@ -348,7 +327,7 @@ fn test_drop_with_truncate_first() {
 
 #[test]
 fn test_clear() {
-    let mut segment = Segment::<DroppableRow>::open_rw("test_clear", 5).unwrap();
+    let mut segment = Segment::<DroppableRow>::open_rw("test_clear.seg", 5).unwrap();
     let counter = Arc::new(AtomicU8::new(0));
 
     assert!(segment
@@ -383,7 +362,7 @@ fn test_advice_prefetch() {
 
     // Test prefetch wih no data
     {
-        let segment = Segment::<i32>::open_rw("test_advice_prefetch", 20).unwrap();
+        let segment = Segment::<i32>::open_rw("test_advice_prefetch.seg", 20).unwrap();
         segment.advice_prefetch_all_pages();
         segment.advice_prefetch_page_at(0);
         segment.advice_prefetch_page_at(18);
@@ -392,7 +371,7 @@ fn test_advice_prefetch() {
 
     // Test prefetch with data
     {
-        let mut segment = Segment::<i32>::open_rw("test_advice_prefetch", 20).unwrap();
+        let mut segment = Segment::<i32>::open_rw("test_advice_prefetch.seg", 20).unwrap();
         assert!(segment.push_within_capacity(5).is_ok());
         assert!(segment.push_within_capacity(9).is_ok());
         assert!(segment.push_within_capacity(2).is_ok());
@@ -405,74 +384,10 @@ fn test_advice_prefetch() {
 }
 
 #[test]
-fn test_reserve_in_place() {
-    const PAGE_SIZE: usize = 4096;
-
-    // Test on null segment
-    {
-        let mut s = Segment::<i32>::null();
-        unsafe {
-            assert_eq!(
-                s.reserve_in_place(50),
-                Err(MmapVecError::MissingSegmentPath)
-            );
-        }
-    }
-
-    // Test on valid segment with free space
-    {
-        let mut s = Segment::<i32>::open_rw("test_reserve_in_place", 100).unwrap();
-        assert_eq!(s.capacity(), 100);
-
-        unsafe {
-            assert!(s.reserve_in_place(50).is_ok());
-        }
-        assert_eq!(s.capacity(), 100);
-    }
-
-    // Test on valid segment with free space
-    {
-        // Fill the vec
-        let mut s = Segment::<i32>::open_rw("test_reserve_in_place", 100).unwrap();
-        assert_eq!(s.capacity(), 100);
-
-        // Reserve few bytes and check rounding
-        while s.len() < s.capacity() {
-            assert_eq!(s.push_within_capacity(0), Ok(()));
-        }
-        unsafe {
-            assert!(s.reserve_in_place(50).is_ok());
-        }
-        assert_eq!(s.capacity(), 1024);
-        assert_eq!(s.disk_size(), PAGE_SIZE);
-
-        // Reserve one full page
-        while s.len() < s.capacity() {
-            assert_eq!(s.push_within_capacity(0), Ok(()));
-        }
-        unsafe {
-            assert!(s.reserve_in_place(1024).is_ok());
-        }
-        assert_eq!(s.capacity(), 2048);
-        assert_eq!(s.disk_size(), 2 * PAGE_SIZE);
-
-        // Reserve a single byte
-        while s.len() < s.capacity() {
-            assert_eq!(s.push_within_capacity(0), Ok(()));
-        }
-        unsafe {
-            assert!(s.reserve_in_place(1).is_ok());
-        }
-        assert_eq!(s.capacity(), 3072);
-        assert_eq!(s.disk_size(), 3 * PAGE_SIZE);
-    }
-}
-
-#[test]
 fn test_debug() {
     let s = Segment::<u8>::null();
     assert_eq!(
         format!("{s:?}"),
-        "Segment { addr: 0x0, len: 0, capacity: 0, path: None }"
+        "Segment { addr: 0x0, len: 0, capacity: 0 }"
     );
 }

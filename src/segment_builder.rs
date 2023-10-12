@@ -11,7 +11,7 @@ use crate::Segment;
 /// Trait that contains everything we need to deals with unique segment creation.
 pub trait SegmentBuilder: Default {
     /// Create / allocate new memory mapped segment.
-    fn create_new_segment<T>(&self, capacity: usize) -> io::Result<Segment<T>>;
+    fn create_new_segment<T>(&self, capacity: usize) -> io::Result<(Segment<T>, PathBuf)>;
 }
 
 /// Default implementation for `SegmentBuilder` trait.
@@ -66,10 +66,11 @@ impl Default for DefaultSegmentBuilder {
 }
 
 impl SegmentBuilder for DefaultSegmentBuilder {
-    fn create_new_segment<T>(&self, capacity: usize) -> io::Result<Segment<T>> {
+    fn create_new_segment<T>(&self, capacity: usize) -> io::Result<(Segment<T>, PathBuf)> {
         let segment_id = Uuid::new_v4().as_hyphenated().to_string();
         let path = self.store_path.join(format!("{segment_id}.seg"));
-        Segment::open_rw(path, capacity)
+        let seg = Segment::open_rw(&path, capacity)?;
+        Ok((seg, path))
     }
 }
 
@@ -80,8 +81,9 @@ mod tests {
     #[test]
     fn test_uniqueness() {
         let builder = DefaultSegmentBuilder::default();
-        let seg1 = builder.create_new_segment::<u8>(8).unwrap();
-        let seg2 = builder.create_new_segment::<u8>(8).unwrap();
+        let (seg1, path1) = builder.create_new_segment::<u8>(8).unwrap();
+        let (seg2, path2) = builder.create_new_segment::<u8>(8).unwrap();
         assert_ne!(seg1.as_ptr(), seg2.as_ptr());
+        assert_ne!(path1, path2);
     }
 }

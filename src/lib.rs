@@ -115,8 +115,9 @@ Prefetching API is not fully stable for now and may change in the future.
  */
 
 use std::{
-    io, mem,
+    fs, io, mem,
     ops::{Deref, DerefMut},
+    path::PathBuf,
 };
 
 pub use error::MmapVecError;
@@ -140,6 +141,7 @@ mod vec_builder;
 pub struct MmapVec<T, B: SegmentBuilder = DefaultSegmentBuilder> {
     pub(crate) segment: Segment<T>,
     pub(crate) builder: B,
+    pub(crate) path: Option<PathBuf>,
 }
 
 impl<T, B> MmapVec<T, B>
@@ -152,6 +154,7 @@ where
         Self {
             segment: Segment::null(),
             builder: B::default(),
+            path: None,
         }
     }
 
@@ -167,6 +170,11 @@ where
     #[inline(always)]
     pub fn capacity(&self) -> usize {
         self.segment.capacity()
+    }
+
+    /// Bytes use on disk for this vec.
+    pub fn disk_size(&self) -> usize {
+        self.segment.disk_size()
     }
 
     /// Shortens the vec, keeping the first `new_len` elements and dropping
@@ -229,12 +237,17 @@ where
         if self.segment.len() == self.segment.capacity() {
             let min_capacity = page_size() / mem::size_of::<T>();
             let new_capacity = std::cmp::max(self.segment.capacity() * 2, min_capacity);
-            let new_segment = self.builder.create_new_segment::<T>(new_capacity)?;
+            let (new_segment, new_path) = self.builder.create_new_segment::<T>(new_capacity)?;
             debug_assert!(new_segment.capacity() > self.segment.capacity());
 
             // Copy previous data to new segment.
             let old_segment = mem::replace(&mut self.segment, new_segment);
+            let old_path = mem::replace(&mut self.path, Some(new_path));
             self.segment.extend_from_segment(old_segment);
+
+            if let Some(path) = old_path {
+                let _ = fs::remove_file(path);
+            }
         }
 
         // Add new value to vec.
@@ -268,7 +281,8 @@ where
     /// This function can significantly improve performances in the case data are "simple".
     #[inline(always)]
     pub unsafe fn reserve_in_place(&mut self, additional: usize) -> Result<(), MmapVecError> {
-        self.segment.reserve_in_place(additional)
+        let path = self.path.as_ref().ok_or(MmapVecError::MissingSegmentPath)?;
+        self.segment.reserve_in_place(path, additional)
     }
 
     /// Inform the kernel that the complete segment will be access in a near future.
@@ -282,6 +296,11 @@ where
     pub fn advice_prefetch_page_at(&self, index: usize) {
         self.segment.advice_prefetch_page_at(index)
     }
+
+    /// Get underlying file path if any.
+    pub fn path(&self) -> Option<PathBuf> {
+        self.path.clone()
+    }
 }
 
 impl<T, B> MmapVec<T, B>
@@ -294,7 +313,7 @@ where
     /// A new segment will be created for output vec.
     /// Capacity of the new vec will be the same as source vec.
     pub fn try_clone(&self) -> io::Result<Self> {
-        let mut other_segment = self.builder.create_new_segment(self.capacity())?;
+        let (mut other_segment, other_path) = self.builder.create_new_segment(self.capacity())?;
 
         // Bellow code could be optimize, but we have to deal with Clone implementation that can panic ...
         for row in &self[..] {
@@ -308,6 +327,7 @@ where
         Ok(Self {
             builder: self.builder.clone(),
             segment: other_segment,
+            path: Some(other_path),
         })
     }
 }
@@ -366,4 +386,15 @@ where
     B: SegmentBuilder,
     T: Eq,
 {
+}
+
+impl<T, B> Drop for MmapVec<T, B>
+where
+    B: SegmentBuilder,
+{
+    fn drop(&mut self) {
+        if let Some(path) = &self.path {
+            let _ = fs::remove_file(path);
+        }
+    }
 }

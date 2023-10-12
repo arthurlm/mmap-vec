@@ -1,9 +1,9 @@
 use std::{
-    fs::{self, File, OpenOptions},
+    fs::{File, OpenOptions},
     io, mem,
     ops::{Deref, DerefMut},
     os::fd::AsRawFd,
-    path::{Path, PathBuf},
+    path::Path,
     ptr, slice,
     sync::atomic::Ordering,
 };
@@ -24,7 +24,6 @@ pub struct Segment<T> {
     addr: *mut T,
     len: usize,
     capacity: usize,
-    path: Option<PathBuf>,
 }
 
 impl<T> Segment<T> {
@@ -35,7 +34,6 @@ impl<T> Segment<T> {
             addr: std::ptr::null_mut(),
             len: 0,
             capacity: 0,
-            path: None,
         }
     }
 
@@ -62,7 +60,6 @@ impl<T> Segment<T> {
             addr,
             len: 0,
             capacity,
-            path: Some(path.as_ref().to_path_buf()),
         })
     }
 
@@ -214,9 +211,11 @@ impl<T> Segment<T> {
     ///
     /// If no special treatment has to be done when dropping data, this function can be considered as "safe".
     /// This function can significantly improve performances in the case data are "simple".
-    pub unsafe fn reserve_in_place(&mut self, additional: usize) -> Result<(), MmapVecError> {
-        let path = self.path.as_ref().ok_or(MmapVecError::MissingSegmentPath)?;
-
+    pub unsafe fn reserve_in_place<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+        additional: usize,
+    ) -> Result<(), MmapVecError> {
         let mut new_capacity = self.len + additional;
 
         if self.capacity < new_capacity {
@@ -332,10 +331,6 @@ impl<T> Drop for Segment<T> {
 
         if !self.addr.is_null() {
             let _ = unsafe { munmap(self.addr, self.capacity) };
-        }
-
-        if let Some(path) = &self.path {
-            let _ = fs::remove_file(path);
         }
     }
 }
