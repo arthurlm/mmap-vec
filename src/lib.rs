@@ -269,20 +269,44 @@ where
 
     /// Resize the vec without copying data.
     ///
-    /// For implementation details please check doc of `Segment::reserve_in_place`.
+    /// # How it works ?
     ///
-    /// # Safety
-    ///
-    /// If there is an I/O error after un-mapping the segment, then drop will never have been called on unmapped data.
-    ///
-    /// This can happen for example if disk is full.
-    ///
-    /// If no special treatment has to be done when dropping data, this function can be considered as "safe".
-    /// This function can significantly improve performances in the case data are "simple".
-    #[inline(always)]
-    pub unsafe fn reserve_in_place(&mut self, additional: usize) -> Result<(), MmapVecError> {
-        let path = self.path.as_ref().ok_or(MmapVecError::MissingSegmentPath)?;
-        self.segment.reserve_in_place(path, additional)
+    /// 1. It first check we need to grow the segment.
+    /// 2. Call `Segment::<T>::open_rw` with a bigger capacity that what we already reserve.
+    ///    At this point, the file is mmap twice.
+    /// 3. Replace `self.segment` we newly mapped segment if there is no error.
+    /// 4. Update segment len to avoid calling drop on unwanted data.
+    pub fn reserve(&mut self, additional: usize) -> Result<(), MmapVecError> {
+        let current_len = self.len();
+        let mut new_capacity = current_len + additional;
+
+        if self.capacity() < new_capacity {
+            let path = self.path.as_ref().ok_or(MmapVecError::MissingSegmentPath)?;
+
+            // Round to upper page new capacity
+            let page_size = page_size();
+            let page_capacity = page_size / mem::size_of::<T>();
+            if new_capacity % page_capacity != 0 {
+                new_capacity += page_capacity - (new_capacity % page_capacity);
+            }
+            assert!(new_capacity > self.segment.capacity());
+
+            // Map again path with a new segment
+            let new_segment = Segment::<T>::open_rw(path, new_capacity)?;
+
+            // At this point we cannot panic anymore !
+            // We have to carefully unmap region to avoir calling multiple times drop
+            let mut old_segment = mem::replace(&mut self.segment, new_segment);
+            assert_ne!(old_segment.addr, self.segment.addr);
+
+            // Update capacity to nothing should be dropped twice.
+            unsafe {
+                old_segment.set_len(0);
+                self.segment.set_len(current_len);
+            }
+        }
+
+        Ok(())
     }
 
     /// Inform the kernel that the complete segment will be access in a near future.

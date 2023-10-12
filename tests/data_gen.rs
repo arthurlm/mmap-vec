@@ -1,5 +1,5 @@
 use std::sync::{
-    atomic::{AtomicU8, Ordering},
+    atomic::{AtomicU32, Ordering},
     Arc,
 };
 
@@ -39,11 +39,11 @@ pub const ROW4: DataRow = DataRow {
 
 #[derive(Debug, Clone)]
 pub struct DroppableRow {
-    counter: Arc<AtomicU8>,
+    counter: Arc<AtomicU32>,
 }
 
 impl DroppableRow {
-    pub fn new(counter: Arc<AtomicU8>) -> Self {
+    pub fn new(counter: Arc<AtomicU32>) -> Self {
         Self { counter }
     }
 }

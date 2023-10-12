@@ -1,5 +1,5 @@
 use std::sync::{
-    atomic::{AtomicU8, Ordering},
+    atomic::{AtomicU32, Ordering},
     Arc,
 };
 
@@ -73,7 +73,7 @@ fn test_pop() {
 #[test]
 fn test_drop() {
     let mut v = MmapVec::<DroppableRow>::new();
-    let counter = Arc::new(AtomicU8::new(0));
+    let counter = Arc::new(AtomicU32::new(0));
 
     // Check push / pull inc
     assert!(v.push(DroppableRow::new(counter.clone())).is_ok());
@@ -93,7 +93,7 @@ fn test_drop() {
 #[test]
 fn test_truncate() {
     let mut v = MmapVec::<DroppableRow>::new();
-    let counter = Arc::new(AtomicU8::new(0));
+    let counter = Arc::new(AtomicU32::new(0));
 
     assert!(v.push(DroppableRow::new(counter.clone())).is_ok());
     assert!(v.push(DroppableRow::new(counter.clone())).is_ok());
@@ -165,7 +165,7 @@ fn test_truncate_first() {
 #[test]
 fn test_clear() {
     let mut v = MmapVec::<DroppableRow>::new();
-    let counter = Arc::new(AtomicU8::new(0));
+    let counter = Arc::new(AtomicU32::new(0));
 
     assert!(v.push(DroppableRow::new(counter.clone())).is_ok());
     assert!(v.push(DroppableRow::new(counter.clone())).is_ok());
@@ -284,12 +284,7 @@ fn test_reserve_in_place() {
     // Test on null segment
     {
         let mut s = MmapVec::<i32>::new();
-        unsafe {
-            assert_eq!(
-                s.reserve_in_place(50),
-                Err(MmapVecError::MissingSegmentPath)
-            );
-        }
+        assert_eq!(s.reserve(50), Err(MmapVecError::MissingSegmentPath));
     }
 
     // Test on valid segment with free space
@@ -297,9 +292,7 @@ fn test_reserve_in_place() {
         let mut s = MmapVec::<i32>::with_capacity(100).unwrap();
         assert_eq!(s.capacity(), 100);
 
-        unsafe {
-            assert!(s.reserve_in_place(50).is_ok());
-        }
+        assert!(s.reserve(50).is_ok());
         assert_eq!(s.capacity(), 100);
     }
 
@@ -313,9 +306,8 @@ fn test_reserve_in_place() {
         while s.len() < s.capacity() {
             assert_eq!(s.push_within_capacity(0), Ok(()));
         }
-        unsafe {
-            assert!(s.reserve_in_place(50).is_ok());
-        }
+
+        assert!(s.reserve(50).is_ok());
         assert_eq!(s.capacity(), 1024);
         assert_eq!(s.disk_size(), PAGE_SIZE);
 
@@ -323,9 +315,8 @@ fn test_reserve_in_place() {
         while s.len() < s.capacity() {
             assert_eq!(s.push_within_capacity(0), Ok(()));
         }
-        unsafe {
-            assert!(s.reserve_in_place(1024).is_ok());
-        }
+
+        assert!(s.reserve(1024).is_ok());
         assert_eq!(s.capacity(), 2048);
         assert_eq!(s.disk_size(), 2 * PAGE_SIZE);
 
@@ -333,12 +324,41 @@ fn test_reserve_in_place() {
         while s.len() < s.capacity() {
             assert_eq!(s.push_within_capacity(0), Ok(()));
         }
-        unsafe {
-            assert!(s.reserve_in_place(1).is_ok());
-        }
+
+        assert!(s.reserve(1).is_ok());
         assert_eq!(s.capacity(), 3072);
         assert_eq!(s.disk_size(), 3 * PAGE_SIZE);
     }
+}
+
+#[test]
+fn test_reserve_in_place_drop() {
+    let mut s = MmapVec::<DroppableRow>::with_capacity(100).unwrap();
+    let counter = Arc::new(AtomicU32::new(0));
+
+    // Fill vec
+    while s.len() < s.capacity() {
+        assert!(s
+            .push_within_capacity(DroppableRow::new(counter.clone()))
+            .is_ok());
+    }
+    assert_eq!(s.capacity(), 100);
+    assert_eq!(counter.load(Ordering::Relaxed), 0);
+
+    // Trigger resize
+    assert!(s.reserve(50).is_ok());
+    assert_eq!(counter.load(Ordering::Relaxed), 0);
+
+    // Fill vec again
+    assert!(s
+        .push_within_capacity(DroppableRow::new(counter.clone()))
+        .is_ok());
+    assert_eq!(s.capacity(), 512);
+    assert_eq!(s.len(), 101);
+    assert_eq!(counter.load(Ordering::Relaxed), 0);
+
+    drop(s);
+    assert_eq!(counter.load(Ordering::Relaxed), 101);
 }
 
 #[test]

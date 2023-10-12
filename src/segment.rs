@@ -9,7 +9,6 @@ use std::{
 };
 
 use crate::{
-    error::MmapVecError,
     stats::{COUNT_ACTIVE_SEGMENT, COUNT_FTRUNCATE_FAILED, COUNT_MMAP_FAILED, COUNT_MUNMAP_FAILED},
     utils::page_size,
 };
@@ -21,7 +20,7 @@ use crate::{
 /// It cannot growth / shrink.
 #[derive(Debug)]
 pub struct Segment<T> {
-    addr: *mut T,
+    pub(crate) addr: *mut T,
     len: usize,
     capacity: usize,
 }
@@ -194,63 +193,6 @@ impl<T> Segment<T> {
             self.set_len(new_len);
             other.set_len(0);
         };
-    }
-
-    /// Resize the segment without copying data.
-    ///
-    /// Idea is to:
-    /// 1. Unmap the region without dropping its content.
-    /// 2. Calling `ftruncate` to grow the file.
-    /// 3. Remapping the region and update segment attribute.
-    ///
-    /// # Safety
-    ///
-    /// If there is an I/O error after un-mapping the segment, then drop will never have been called on unmapped data.
-    ///
-    /// This can happen for example if disk is full.
-    ///
-    /// If no special treatment has to be done when dropping data, this function can be considered as "safe".
-    /// This function can significantly improve performances in the case data are "simple".
-    pub unsafe fn reserve_in_place<P: AsRef<Path>>(
-        &mut self,
-        path: P,
-        additional: usize,
-    ) -> Result<(), MmapVecError> {
-        let mut new_capacity = self.len + additional;
-
-        if self.capacity < new_capacity {
-            // Round to upper page new capacity
-            let page_size = page_size();
-            let page_capacity = page_size / mem::size_of::<T>();
-            if new_capacity % page_capacity != 0 {
-                new_capacity += page_capacity - (new_capacity % page_capacity);
-            }
-
-            // Extract address from inner struct.
-            // If one of the following call fail, it will avoid multiple free / accessing un-mapped region.
-            let addr = mem::replace(&mut self.addr, ptr::null_mut());
-            let capacity = mem::replace(&mut self.capacity, 0);
-            let len = mem::replace(&mut self.len, 0);
-
-            // unmap region
-            munmap(addr, capacity)?;
-
-            // Grow file
-            let file = OpenOptions::new()
-                .read(true)
-                .write(true)
-                .create(true)
-                .open(path)?;
-
-            ftruncate::<T>(&file, new_capacity)?;
-
-            // Re-map region
-            self.addr = mmap(&file, new_capacity)?;
-            self.capacity = new_capacity;
-            self.len = len;
-        }
-
-        Ok(())
     }
 
     /// Inform the kernel that the complete segment will be access in a near future.

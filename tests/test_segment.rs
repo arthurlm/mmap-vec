@@ -1,5 +1,5 @@
 use std::sync::{
-    atomic::{AtomicU8, Ordering},
+    atomic::{AtomicU32, Ordering},
     Arc,
 };
 
@@ -124,7 +124,7 @@ fn test_copy_bad_capacity() {
 #[test]
 fn test_drop() {
     let mut segment = Segment::<DroppableRow>::open_rw("test_drop.seg", 5).unwrap();
-    let counter = Arc::new(AtomicU8::new(0));
+    let counter = Arc::new(AtomicU32::new(0));
 
     // Check push / pull inc
     assert!(segment
@@ -148,7 +148,7 @@ fn test_drop() {
 #[test]
 fn test_truncate() {
     let mut segment = Segment::<DroppableRow>::open_rw("test_truncate.seg", 5).unwrap();
-    let counter = Arc::new(AtomicU8::new(0));
+    let counter = Arc::new(AtomicU32::new(0));
 
     assert!(segment
         .push_within_capacity(DroppableRow::new(counter.clone()))
@@ -247,9 +247,9 @@ fn test_truncate_first() {
 
 #[test]
 fn test_drop_with_truncate_first() {
-    let counter = Arc::new(AtomicU8::new(0));
+    let counter = Arc::new(AtomicU32::new(0));
 
-    fn build_test_seg(counter: Arc<AtomicU8>) -> Segment<DroppableRow> {
+    fn build_test_seg(counter: Arc<AtomicU32>) -> Segment<DroppableRow> {
         counter.store(0, Ordering::Relaxed);
 
         let mut segment = Segment::open_rw("test_drop_with_truncate_first.seg", 5).unwrap();
@@ -328,7 +328,7 @@ fn test_drop_with_truncate_first() {
 #[test]
 fn test_clear() {
     let mut segment = Segment::<DroppableRow>::open_rw("test_clear.seg", 5).unwrap();
-    let counter = Arc::new(AtomicU8::new(0));
+    let counter = Arc::new(AtomicU32::new(0));
 
     assert!(segment
         .push_within_capacity(DroppableRow::new(counter.clone()))
