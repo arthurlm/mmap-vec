@@ -3,7 +3,7 @@ use std::sync::{
     Arc,
 };
 
-use mmap_vec::{MmapVec, MmapVecError};
+use mmap_vec::{DefaultSegmentBuilder, MmapVec, MmapVecError};
 
 pub use data_gen::*;
 
@@ -371,4 +371,22 @@ fn test_drop_file() {
     // Drop vec and check file as been removed.
     drop(vec);
     assert!(!path.exists());
+}
+
+#[test]
+fn test_try_from_array() {
+    let vec = MmapVec::<_, DefaultSegmentBuilder>::try_from([8, 6, 4, -48, 16]).unwrap();
+    assert_eq!(&vec[..], [8, 6, 4, -48, 16]);
+}
+
+#[test]
+fn test_try_from_slice() {
+    let vec = MmapVec::<_, DefaultSegmentBuilder>::try_from([8, 6, 4, -48, 16].as_slice()).unwrap();
+    assert_eq!(&vec[..], [8, 6, 4, -48, 16]);
+}
+
+#[test]
+fn test_try_from_vec() {
+    let vec = MmapVec::<_, DefaultSegmentBuilder>::try_from(Vec::from([8, 6, 4, -48, 16])).unwrap();
+    assert_eq!(&vec[..], [8, 6, 4, -48, 16]);
 }

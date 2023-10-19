@@ -428,3 +428,61 @@ where
         }
     }
 }
+
+#[inline(never)]
+#[cold]
+fn panic_bad_capacity() {
+    panic!("MmapVec was build with bad capacity");
+}
+
+impl<T, B, const N: usize> TryFrom<[T; N]> for MmapVec<T, B>
+where
+    B: SegmentBuilder,
+{
+    type Error = io::Error;
+
+    fn try_from(values: [T; N]) -> Result<Self, Self::Error> {
+        let mut out = Self::with_capacity(N)?;
+        for val in values {
+            if out.push_within_capacity(val).is_err() {
+                panic_bad_capacity();
+            }
+        }
+        Ok(out)
+    }
+}
+
+impl<T, B> TryFrom<&[T]> for MmapVec<T, B>
+where
+    T: Clone,
+    B: SegmentBuilder,
+{
+    type Error = io::Error;
+
+    fn try_from(values: &[T]) -> Result<Self, Self::Error> {
+        let mut out = Self::with_capacity(values.len())?;
+        for val in values {
+            if out.push_within_capacity(val.clone()).is_err() {
+                panic_bad_capacity();
+            }
+        }
+        Ok(out)
+    }
+}
+
+impl<T, B> TryFrom<Vec<T>> for MmapVec<T, B>
+where
+    B: SegmentBuilder,
+{
+    type Error = io::Error;
+
+    fn try_from(values: Vec<T>) -> Result<Self, Self::Error> {
+        let mut out = Self::with_capacity(values.len())?;
+        for val in values {
+            if out.push_within_capacity(val).is_err() {
+                panic_bad_capacity();
+            }
+        }
+        Ok(out)
+    }
+}
