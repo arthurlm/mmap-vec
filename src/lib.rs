@@ -173,6 +173,7 @@ where
     }
 
     /// Bytes use on disk for this vec.
+    #[inline(always)]
     pub fn disk_size(&self) -> usize {
         self.segment.disk_size()
     }
@@ -247,7 +248,9 @@ where
         }
 
         // Otherwise reserve some space for new data
-        self.reserve(1)?;
+        if self.capacity() == self.len() {
+            self.reserve(self.len())?;
+        }
 
         // Add new value to vec.
         assert!(

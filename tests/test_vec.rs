@@ -38,7 +38,7 @@ fn test_resize() {
 
     // Trigger third growth
     v.push(ROW2).unwrap();
-    assert_eq!(v.capacity(), 510);
+    assert_eq!(v.capacity(), 680);
 }
 
 #[test]
