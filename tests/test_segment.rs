@@ -10,8 +10,10 @@ use std::{
 use mmap_vec::Segment;
 
 pub use data_gen::*;
+pub use temporary_seg::*;
 
 mod data_gen;
+mod temporary_seg;
 
 fn assert_empty(mut segment: Segment<DataRow>) {
     assert_eq!(segment.len(), 0);
@@ -49,7 +51,7 @@ fn test_open_segment_file_check() {
 
 #[test]
 fn test_open_valid_segment() {
-    let mut segment = Segment::open_rw("test_pull_push.seg", 3).unwrap();
+    let mut segment = TemporarySegment::open_rw("test_pull_push.seg", 3).unwrap();
 
     // Check initial layout.
     assert_eq!(segment.len(), 0);
@@ -96,8 +98,8 @@ fn test_open_valid_segment() {
 
 #[test]
 fn test_copy() {
-    let mut segment1 = Segment::open_rw("test_copy_1.seg", 2).unwrap();
-    let mut segment2 = Segment::open_rw("test_copy_2.seg", 4).unwrap();
+    let mut segment1 = TemporarySegment::open_rw("test_copy_1.seg", 2).unwrap();
+    let mut segment2 = TemporarySegment::open_rw("test_copy_2.seg", 4).unwrap();
 
     // Init and check segments.
     assert_eq!(segment1.push_within_capacity(ROW1), Ok(()));
@@ -108,39 +110,41 @@ fn test_copy() {
     assert_eq!(&segment2[..], &[]);
 
     // Erase data in seg2.
-    segment2.extend_from_segment(segment1);
+    segment2.extend_from_segment(segment1.into_inner());
     assert_eq!(&segment2[..], &[ROW1, ROW2]);
 }
 
 #[test]
 fn test_copy_already_filled() {
-    let mut segment1 = Segment::open_rw("test_copy_already_filled_1.seg", 2).unwrap();
-    let mut segment2 = Segment::open_rw("test_copy_already_filled_2.seg", 4).unwrap();
+    let mut segment1 = TemporarySegment::open_rw("test_copy_already_filled_1.seg", 2).unwrap();
+    let mut segment2 = TemporarySegment::open_rw("test_copy_already_filled_2.seg", 4).unwrap();
 
     assert_eq!(segment1.push_within_capacity(ROW1), Ok(()));
     assert_eq!(segment2.push_within_capacity(ROW2), Ok(()));
 
-    segment2.extend_from_segment(segment1);
+    segment2.extend_from_segment(segment1.into_inner());
     assert_eq!(&segment2[..], &[ROW2, ROW1]);
 }
 
 #[test]
 #[should_panic = "New segment is too small: new_len=4, capacity=3"]
 fn test_copy_bad_capacity() {
-    let mut segment1 = Segment::<u8>::open_rw("test_copy_bad_capacity_1.seg", 2).unwrap();
-    let mut segment2 = Segment::<u8>::open_rw("test_copy_bad_capacity_2.seg", 3).unwrap();
+    let mut segment1 =
+        TemporarySegment::<u8, _>::open_rw("test_copy_bad_capacity_1.seg", 2).unwrap();
+    let mut segment2 =
+        TemporarySegment::<u8, _>::open_rw("test_copy_bad_capacity_2.seg", 3).unwrap();
 
     assert_eq!(segment1.push_within_capacity(0), Ok(()));
     assert_eq!(segment1.push_within_capacity(0), Ok(()));
     assert_eq!(segment2.push_within_capacity(0), Ok(()));
     assert_eq!(segment2.push_within_capacity(0), Ok(()));
 
-    segment2.extend_from_segment(segment1);
+    segment2.extend_from_segment(segment1.into_inner());
 }
 
 #[test]
 fn test_drop() {
-    let mut segment = Segment::<DroppableRow>::open_rw("test_drop.seg", 5).unwrap();
+    let mut segment = TemporarySegment::<DroppableRow, _>::open_rw("test_drop.seg", 5).unwrap();
     let counter = Arc::new(AtomicU32::new(0));
 
     // Check push / pull inc
@@ -164,7 +168,7 @@ fn test_drop() {
 
 #[test]
 fn test_truncate() {
-    let mut segment = Segment::<DroppableRow>::open_rw("test_truncate.seg", 5).unwrap();
+    let mut segment = TemporarySegment::<DroppableRow, _>::open_rw("test_truncate.seg", 5).unwrap();
     let counter = Arc::new(AtomicU32::new(0));
 
     assert!(segment
@@ -203,7 +207,7 @@ fn test_truncate() {
 fn test_truncate_first() {
     // Truncate on empty segment
     {
-        let mut segment = Segment::<u8>::open_rw("test_truncate_first.seg", 5).unwrap();
+        let mut segment = TemporarySegment::<u8, _>::open_rw("test_truncate_first.seg", 5).unwrap();
         assert_eq!(&segment[..], []);
 
         segment.truncate_first(0);
@@ -216,8 +220,8 @@ fn test_truncate_first() {
         assert_eq!(&segment[..], []);
     }
 
-    fn build_test_seg() -> Segment<u8> {
-        let mut segment = Segment::<u8>::open_rw("test_truncate_first.seg", 5).unwrap();
+    fn build_test_seg() -> TemporarySegment<u8, &'static str> {
+        let mut segment = TemporarySegment::<u8, _>::open_rw("test_truncate_first.seg", 5).unwrap();
         segment.push_within_capacity(1).unwrap();
         segment.push_within_capacity(2).unwrap();
         segment.push_within_capacity(6).unwrap();
@@ -266,10 +270,11 @@ fn test_truncate_first() {
 fn test_drop_with_truncate_first() {
     let counter = Arc::new(AtomicU32::new(0));
 
-    fn build_test_seg(counter: Arc<AtomicU32>) -> Segment<DroppableRow> {
+    fn build_test_seg(counter: Arc<AtomicU32>) -> TemporarySegment<DroppableRow, &'static str> {
         counter.store(0, Ordering::Relaxed);
 
-        let mut segment = Segment::open_rw("test_drop_with_truncate_first.seg", 5).unwrap();
+        let mut segment =
+            TemporarySegment::open_rw("test_drop_with_truncate_first.seg", 5).unwrap();
         segment
             .push_within_capacity(DroppableRow::new(counter.clone()))
             .unwrap();
@@ -344,7 +349,7 @@ fn test_drop_with_truncate_first() {
 
 #[test]
 fn test_clear() {
-    let mut segment = Segment::<DroppableRow>::open_rw("test_clear.seg", 5).unwrap();
+    let mut segment = TemporarySegment::<DroppableRow, _>::open_rw("test_clear.seg", 5).unwrap();
     let counter = Arc::new(AtomicU32::new(0));
 
     assert!(segment
@@ -379,7 +384,7 @@ fn test_advice_prefetch() {
 
     // Test prefetch wih no data
     {
-        let segment = Segment::<i32>::open_rw("test_advice_prefetch.seg", 20).unwrap();
+        let segment = TemporarySegment::<i32, _>::open_rw("test_advice_prefetch.seg", 20).unwrap();
         segment.advice_prefetch_all_pages();
         segment.advice_prefetch_page_at(0);
         segment.advice_prefetch_page_at(18);
@@ -388,7 +393,8 @@ fn test_advice_prefetch() {
 
     // Test prefetch with data
     {
-        let mut segment = Segment::<i32>::open_rw("test_advice_prefetch.seg", 20).unwrap();
+        let mut segment =
+            TemporarySegment::<i32, _>::open_rw("test_advice_prefetch.seg", 20).unwrap();
         assert!(segment.push_within_capacity(5).is_ok());
         assert!(segment.push_within_capacity(9).is_ok());
         assert!(segment.push_within_capacity(2).is_ok());

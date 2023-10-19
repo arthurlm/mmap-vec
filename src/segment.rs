@@ -178,6 +178,9 @@ impl<T> Segment<T> {
     ///
     /// s2.extend_from_segment(s1);
     /// assert_eq!(&s2[..], [-4, 37, 7, -3]);
+    ///
+    /// # let _ = std::fs::remove_file("test_extend_from_segment_1.seg");
+    /// # let _ = std::fs::remove_file("test_extend_from_segment_2.seg");
     /// ```
     pub fn extend_from_segment(&mut self, mut other: Segment<T>) {
         let new_len = other.len + self.len;
