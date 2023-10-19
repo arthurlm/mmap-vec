@@ -1,6 +1,10 @@
-use std::sync::{
-    atomic::{AtomicU32, Ordering},
-    Arc,
+use std::{
+    fs,
+    path::PathBuf,
+    sync::{
+        atomic::{AtomicU32, Ordering},
+        Arc,
+    },
 };
 
 use mmap_vec::Segment;
@@ -27,7 +31,20 @@ fn test_null() {
 
 #[test]
 fn test_open_empty_segment() {
-    assert_empty(Segment::open_rw("test_open_empty_segment.seg", 0).unwrap());
+    let p = PathBuf::from("test_open_empty_segment.seg");
+    assert_empty(Segment::open_rw(&p, 0).unwrap());
+    assert!(!p.exists());
+}
+
+#[test]
+fn test_open_segment_file_check() {
+    let p = PathBuf::from("test_open_segment_file_check.seg");
+    let _ = fs::remove_file(&p);
+
+    assert!(Segment::<i32>::open_rw(&p, 1).is_ok());
+    assert!(p.exists());
+
+    let _ = fs::remove_file(&p);
 }
 
 #[test]
