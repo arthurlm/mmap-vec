@@ -1,6 +1,6 @@
 use std::{io, marker::PhantomData, mem};
 
-use crate::{utils::page_size, DefaultSegmentBuilder, MmapVec, SegmentBuilder};
+use crate::{utils::page_size, DefaultSegmentBuilder, MmapVec, Segment, SegmentBuilder};
 
 /// Helps to create vec with custom parameters.
 ///
@@ -48,7 +48,8 @@ impl<T, SB: SegmentBuilder> MmapVecBuilder<T, SB> {
     ///
     /// This function may failed if segment creation failed.
     pub fn try_build(self) -> io::Result<MmapVec<T, SB>> {
-        let (segment, path) = self.segment_builder.create_new_segment(self.capacity)?;
+        let path = self.segment_builder.new_segment_path();
+        let segment = Segment::open_rw(&path, self.capacity)?;
 
         Ok(MmapVec {
             segment,

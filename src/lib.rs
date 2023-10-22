@@ -238,7 +238,8 @@ where
         // If segment is null, init one
         if self.segment.capacity() == 0 {
             let min_capacity = page_size() / mem::size_of::<T>();
-            let (new_segment, new_path) = self.builder.create_new_segment::<T>(min_capacity)?;
+            let new_path = self.builder.new_segment_path();
+            let new_segment = Segment::<T>::open_rw(&new_path, min_capacity)?;
             debug_assert!(new_segment.capacity() > self.segment.capacity());
 
             let old_segment = mem::replace(&mut self.segment, new_segment);
@@ -343,7 +344,8 @@ where
             return Ok(Self::default());
         }
 
-        let (mut other_segment, other_path) = self.builder.create_new_segment(self.capacity())?;
+        let other_path = self.builder.new_segment_path();
+        let mut other_segment = Segment::open_rw(&other_path, self.capacity())?;
 
         // Bellow code could be optimize, but we have to deal with Clone implementation that can panic ...
         for row in &self[..] {
