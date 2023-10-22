@@ -16,3 +16,16 @@ fn test_serializer() {
         assert_eq!(serde_json::to_string(&vec).unwrap(), "[42,8,52]");
     }
 }
+
+#[test]
+#[cfg(feature = "serde")]
+fn test_deserialize() {
+    {
+        let vec: MmapVec<u32> = serde_json::from_str("[]").unwrap();
+        assert_eq!(&vec[..], Vec::<u32>::new());
+    }
+    {
+        let vec: MmapVec<u32> = serde_json::from_str("[8,6,42]").unwrap();
+        assert_eq!(&vec[..], [8, 6, 42]);
+    }
+}

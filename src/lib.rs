@@ -119,13 +119,20 @@ use std::{
     path::PathBuf,
 };
 
+#[cfg(feature = "serde")]
+use std::marker::PhantomData;
+
 pub use segment::Segment;
 pub use segment_builder::{DefaultSegmentBuilder, SegmentBuilder};
 pub use stats::MmapStats;
 pub use vec_builder::MmapVecBuilder;
 
 #[cfg(feature = "serde")]
-use serde::{ser::SerializeSeq, Serialize, Serializer};
+use serde::{
+    de::{SeqAccess, Visitor},
+    ser::SerializeSeq,
+    Deserialize, Deserializer, Serialize, Serializer,
+};
 
 use crate::utils::page_size;
 
@@ -490,5 +497,62 @@ where
             seq.serialize_element(element)?;
         }
         seq.end()
+    }
+}
+
+#[cfg(feature = "serde")]
+struct MmapVecVisitor<T, B: SegmentBuilder> {
+    _marker: PhantomData<fn() -> MmapVec<T, B>>,
+}
+
+#[cfg(feature = "serde")]
+impl<T, B: SegmentBuilder> MmapVecVisitor<T, B> {
+    fn new() -> Self {
+        Self {
+            _marker: PhantomData,
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, T, B> Visitor<'de> for MmapVecVisitor<T, B>
+where
+    T: Deserialize<'de>,
+    B: SegmentBuilder,
+{
+    type Value = MmapVec<T, B>;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("expected sequence of element")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        use serde::de::Error;
+
+        let capacity = seq.size_hint().unwrap_or(0);
+        let mut output = MmapVec::<T, B>::with_capacity(capacity).map_err(Error::custom)?;
+
+        while let Some(element) = seq.next_element()? {
+            output.push(element).map_err(Error::custom)?;
+        }
+
+        Ok(output)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, T, B> Deserialize<'de> for MmapVec<T, B>
+where
+    T: Deserialize<'de>,
+    B: SegmentBuilder,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_seq(MmapVecVisitor::new())
     }
 }
