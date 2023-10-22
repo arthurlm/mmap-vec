@@ -125,6 +125,7 @@ use std::marker::PhantomData;
 pub use segment::Segment;
 pub use segment_builder::{DefaultSegmentBuilder, SegmentBuilder};
 pub use stats::MmapStats;
+use utils::check_zst;
 pub use vec_builder::MmapVecBuilder;
 
 #[cfg(feature = "serde")]
@@ -157,6 +158,8 @@ where
     /// Create a zero size mmap vec.
     #[inline(always)]
     pub fn new() -> Self {
+        check_zst::<T>();
+
         let builder = B::default();
         let path = builder.new_segment_path();
         Self {

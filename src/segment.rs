@@ -10,7 +10,7 @@ use std::{
 
 use crate::{
     stats::{COUNT_ACTIVE_SEGMENT, COUNT_FTRUNCATE_FAILED, COUNT_MMAP_FAILED, COUNT_MUNMAP_FAILED},
-    utils::page_size,
+    utils::{check_zst, page_size},
 };
 
 /// Segment is a constant slice of type T that is memory mapped to disk.
@@ -29,6 +29,7 @@ impl<T> Segment<T> {
     /// Create a zero size segment.
     #[inline(always)]
     pub const fn null() -> Self {
+        check_zst::<T>();
         Self {
             addr: std::ptr::null_mut(),
             len: 0,
@@ -40,6 +41,7 @@ impl<T> Segment<T> {
     ///
     /// File will be created and init with computed capacity.
     pub fn open_rw<P: AsRef<Path>>(path: P, capacity: usize) -> io::Result<Self> {
+        check_zst::<T>();
         if capacity == 0 {
             return Ok(Self::null());
         }
@@ -284,6 +286,7 @@ unsafe impl<T> Send for Segment<T> {}
 unsafe impl<T> Sync for Segment<T> {}
 
 unsafe fn ftruncate<T>(file: &File, capacity: usize) -> io::Result<()> {
+    check_zst::<T>();
     let segment_size = capacity * mem::size_of::<T>();
     let fd = file.as_raw_fd();
 
@@ -296,6 +299,7 @@ unsafe fn ftruncate<T>(file: &File, capacity: usize) -> io::Result<()> {
 }
 
 unsafe fn mmap<T>(file: &File, capacity: usize) -> io::Result<*mut T> {
+    check_zst::<T>();
     let segment_size = capacity * mem::size_of::<T>();
 
     // It is safe to not keep a reference to the initial file descriptor.
@@ -321,6 +325,7 @@ unsafe fn mmap<T>(file: &File, capacity: usize) -> io::Result<*mut T> {
 }
 
 unsafe fn munmap<T>(addr: *mut T, capacity: usize) -> io::Result<()> {
+    check_zst::<T>();
     debug_assert!(!addr.is_null());
     debug_assert!(capacity > 0);
 

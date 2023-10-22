@@ -392,3 +392,11 @@ fn test_try_from_vec() {
     let vec = MmapVec::<_, DefaultSegmentBuilder>::try_from(Vec::from([8, 6, 4, -48, 16])).unwrap();
     assert_eq!(&vec[..], [8, 6, 4, -48, 16]);
 }
+
+#[test]
+#[should_panic = "Zero sized type are not supported"]
+fn test_zero_sized_type() {
+    struct VoidStruct;
+
+    let _vec = MmapVec::<VoidStruct>::with_capacity(50).unwrap();
+}
