@@ -54,7 +54,7 @@ impl<T, SB: SegmentBuilder> MmapVecBuilder<T, SB> {
         Ok(MmapVec {
             segment,
             builder: self.segment_builder,
-            path: Some(path),
+            path,
         })
     }
 }

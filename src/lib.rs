@@ -138,7 +138,7 @@ mod vec_builder;
 pub struct MmapVec<T, B: SegmentBuilder = DefaultSegmentBuilder> {
     pub(crate) segment: Segment<T>,
     pub(crate) builder: B,
-    pub(crate) path: Option<PathBuf>,
+    pub(crate) path: PathBuf,
 }
 
 impl<T, B> MmapVec<T, B>
@@ -148,10 +148,12 @@ where
     /// Create a zero size mmap vec.
     #[inline(always)]
     pub fn new() -> Self {
+        let builder = B::default();
+        let path = builder.new_segment_path();
         Self {
             segment: Segment::null(),
-            builder: B::default(),
-            path: None,
+            builder,
+            path,
         }
     }
 
@@ -269,11 +271,6 @@ where
         let mut new_capacity = current_len + additional;
 
         if self.capacity() < new_capacity {
-            let new_path = self
-                .path
-                .clone()
-                .unwrap_or_else(|| self.builder.new_segment_path());
-
             // Round to upper page new capacity
             let page_size = page_size();
             let page_capacity = page_size / mem::size_of::<T>();
@@ -282,13 +279,12 @@ where
             }
             assert!(new_capacity > self.segment.capacity());
 
-            // Map again path with a new segment
-            let new_segment = Segment::<T>::open_rw(&new_path, new_capacity)?;
+            // Map again path with a new segment but with bigger capacity.
+            let new_segment = Segment::<T>::open_rw(&self.path, new_capacity)?;
             debug_assert!(new_segment.capacity() > self.segment.capacity());
 
             // At this point we cannot panic anymore !
             // We have to carefully unmap region to avoid calling multiple times drop
-            let _old_path = mem::replace(&mut self.path, Some(new_path));
             let mut old_segment = mem::replace(&mut self.segment, new_segment);
             assert_ne!(old_segment.addr, self.segment.addr);
 
@@ -314,8 +310,8 @@ where
         self.segment.advice_prefetch_page_at(index)
     }
 
-    /// Get underlying file path if any.
-    pub fn path(&self) -> Option<PathBuf> {
+    /// Get underlying file path.
+    pub fn path(&self) -> PathBuf {
         self.path.clone()
     }
 }
@@ -349,7 +345,7 @@ where
         Ok(Self {
             builder: self.builder.clone(),
             segment: other_segment,
-            path: Some(other_path),
+            path: other_path,
         })
     }
 }
@@ -415,9 +411,7 @@ where
     B: SegmentBuilder,
 {
     fn drop(&mut self) {
-        if let Some(path) = &self.path {
-            let _ = fs::remove_file(path);
-        }
+        let _ = fs::remove_file(&self.path);
     }
 }
 

@@ -367,7 +367,7 @@ fn test_reserve_in_place_drop() {
 fn test_drop_file() {
     // Create vec.
     let vec = MmapVec::<i32>::with_capacity(100).unwrap();
-    let path = vec.path().unwrap();
+    let path = vec.path();
     assert!(path.exists());
 
     // Drop vec and check file as been removed.
