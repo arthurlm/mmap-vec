@@ -29,7 +29,7 @@ impl fmt::Debug for MmapStats {
 impl MmapStats {
     /// Get number of current segment mounted by this library.
     ///
-    /// On linux there is a `systctl` limit you can access with:
+    /// On linux there is a `sysctl` limit you can access with:
     /// ```shell
     /// sysctl vm.max_map_count
     /// ```

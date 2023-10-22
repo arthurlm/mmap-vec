@@ -1,0 +1,17 @@
+{
+    "cSpell.words": [
+        "codecov",
+        "mmap",
+        "munmap",
+        "unmap",
+        "libc",
+        "getrandom",
+        "ftruncate",
+        "sysctl",
+        "sysconf",
+        "madvise",
+        "madv",
+        "willneed",
+        "nonoverlapping",
+    ]
+}
