@@ -120,15 +120,12 @@ use std::{
     path::PathBuf,
 };
 
-pub use error::MmapVecError;
 pub use segment::Segment;
 pub use segment_builder::{DefaultSegmentBuilder, SegmentBuilder};
 pub use stats::MmapStats;
 pub use vec_builder::MmapVecBuilder;
 
 use crate::utils::page_size;
-
-pub mod error;
 
 mod segment;
 mod segment_builder;
@@ -234,7 +231,7 @@ where
     /// - current segment may be resize.
     ///
     /// This is why this function can fail, because it depends on FS / IO calls.
-    pub fn push(&mut self, value: T) -> Result<(), MmapVecError> {
+    pub fn push(&mut self, value: T) -> Result<(), io::Error> {
         // If segment is null, init one
         if self.segment.capacity() == 0 {
             let min_capacity = page_size() / mem::size_of::<T>();
@@ -279,12 +276,15 @@ where
     ///    At this point, the file is mmap twice.
     /// 3. Replace `self.segment` we newly mapped segment if there is no error.
     /// 4. Update segment len to avoid calling drop on unwanted data.
-    pub fn reserve(&mut self, additional: usize) -> Result<(), MmapVecError> {
+    pub fn reserve(&mut self, additional: usize) -> Result<(), io::Error> {
         let current_len = self.len();
         let mut new_capacity = current_len + additional;
 
         if self.capacity() < new_capacity {
-            let path = self.path.as_ref().ok_or(MmapVecError::MissingSegmentPath)?;
+            let new_path = self
+                .path
+                .clone()
+                .unwrap_or_else(|| self.builder.new_segment_path());
 
             // Round to upper page new capacity
             let page_size = page_size();
@@ -295,10 +295,11 @@ where
             assert!(new_capacity > self.segment.capacity());
 
             // Map again path with a new segment
-            let new_segment = Segment::<T>::open_rw(path, new_capacity)?;
+            let new_segment = Segment::<T>::open_rw(&new_path, new_capacity)?;
 
             // At this point we cannot panic anymore !
-            // We have to carefully unmap region to avoir calling multiple times drop
+            // We have to carefully unmap region to avoid calling multiple times drop
+            let _old_path = mem::replace(&mut self.path, Some(new_path));
             let mut old_segment = mem::replace(&mut self.segment, new_segment);
             assert_ne!(old_segment.addr, self.segment.addr);
 

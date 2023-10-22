@@ -3,7 +3,7 @@ use std::sync::{
     Arc,
 };
 
-use mmap_vec::{DefaultSegmentBuilder, MmapVec, MmapVecError};
+use mmap_vec::{DefaultSegmentBuilder, MmapVec};
 
 pub use data_gen::*;
 
@@ -284,7 +284,9 @@ fn test_reserve_in_place() {
     // Test on null segment
     {
         let mut s = MmapVec::<i32>::new();
-        assert_eq!(s.reserve(50), Err(MmapVecError::MissingSegmentPath));
+        assert_eq!(s.capacity(), 0);
+        s.reserve(50).unwrap();
+        assert_eq!(s.capacity(), 1024);
     }
 
     // Test on valid segment with free space
