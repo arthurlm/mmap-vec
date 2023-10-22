@@ -232,22 +232,10 @@ where
     ///
     /// This is why this function can fail, because it depends on FS / IO calls.
     pub fn push(&mut self, value: T) -> Result<(), io::Error> {
-        // If segment is null, init one
-        if self.segment.capacity() == 0 {
-            let min_capacity = page_size() / mem::size_of::<T>();
-            let new_path = self.builder.new_segment_path();
-            let new_segment = Segment::<T>::open_rw(&new_path, min_capacity)?;
-            debug_assert!(new_segment.capacity() > self.segment.capacity());
-
-            let old_segment = mem::replace(&mut self.segment, new_segment);
-            let old_path = mem::replace(&mut self.path, Some(new_path));
-            debug_assert!(old_segment.addr.is_null());
-            debug_assert!(old_path.is_none());
-        }
-
-        // Otherwise reserve some space for new data
+        // Reserve some space if vec is full.
         if self.capacity() == self.len() {
-            self.reserve(self.len())?;
+            let min_capacity = page_size() / mem::size_of::<T>();
+            self.reserve(std::cmp::max(self.len(), min_capacity))?;
         }
 
         // Add new value to vec.
@@ -296,6 +284,7 @@ where
 
             // Map again path with a new segment
             let new_segment = Segment::<T>::open_rw(&new_path, new_capacity)?;
+            debug_assert!(new_segment.capacity() > self.segment.capacity());
 
             // At this point we cannot panic anymore !
             // We have to carefully unmap region to avoid calling multiple times drop
