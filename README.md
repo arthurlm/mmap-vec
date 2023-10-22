@@ -107,6 +107,5 @@ Prefetching API is not fully stable for now and may change in the future.
 ## Ideas / new features ?
 
 - Implement custom `std::alloc::Allocator` to use with `std::vec::Vec`
-- Serde support
 
 License: MIT

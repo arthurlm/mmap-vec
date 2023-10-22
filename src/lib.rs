@@ -111,7 +111,6 @@ Prefetching API is not fully stable for now and may change in the future.
 ## Ideas / new features ?
 
 - Implement custom `std::alloc::Allocator` to use with `std::vec::Vec`
-- Serde support
  */
 
 use std::{
@@ -124,6 +123,9 @@ pub use segment::Segment;
 pub use segment_builder::{DefaultSegmentBuilder, SegmentBuilder};
 pub use stats::MmapStats;
 pub use vec_builder::MmapVecBuilder;
+
+#[cfg(feature = "serde")]
+use serde::{ser::SerializeSeq, Serialize, Serializer};
 
 use crate::utils::page_size;
 
@@ -470,5 +472,23 @@ where
             }
         }
         Ok(out)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<T, B> Serialize for MmapVec<T, B>
+where
+    T: Serialize,
+    B: SegmentBuilder,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(self.len()))?;
+        for element in self.iter() {
+            seq.serialize_element(element)?;
+        }
+        seq.end()
     }
 }

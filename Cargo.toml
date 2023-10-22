@@ -15,10 +15,13 @@ exclude = ["tests/", ".github/"]
 libc = "0.2.147"
 uuid = { version = "1.4.1", features = ["v4"] }
 dirs = { version = "5.0.1", optional = true }
+serde = { version = "1.0.189", optional = true }
 
 [dev-dependencies]
 glob = "0.3.1"
+serde_json = "1.0.107"
 
 [features]
-default = ["cache-dir"]
+default = ["cache-dir", "serde"]
 cache-dir = ["dep:dirs"]
+serde = ["dep:serde"]
