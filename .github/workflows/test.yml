@@ -10,27 +10,27 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  build_and_tests:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
     - run: rustup toolchain install 1.66.1
     - run: rustup override set 1.66.1
     - uses: Swatinem/rust-cache@v2
     - run: rustc --version
-    
     - name: Build
       run: cargo build --verbose
-
     - name: Run tests
       run: cargo test --verbose
-
     - name: Run tests (no default features)
       run: cargo test --verbose --no-default-features
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: Swatinem/rust-cache@v2
     - name: Lint
       run: cargo clippy
-
     - name: Format
       run: cargo fmt --check
