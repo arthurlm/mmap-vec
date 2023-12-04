@@ -9,6 +9,7 @@ repository = "https://github.com/arthurlm/mmap-vec"
 documentation = "https://docs.rs/mmap-vec"
 keywords = ["mmap", "data-strucure"]
 categories = ["os::unix-apis", "data-structures", "memory-management"]
+rust-version = "1.66.1"
 exclude = ["tests/", ".github/"]
 
 [dependencies]

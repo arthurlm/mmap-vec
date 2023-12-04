@@ -5,6 +5,7 @@
 [![docs.rs](https://docs.rs/mmap-vec/badge.svg)](https://docs.rs/mmap-vec/)
 [![Crates.io](https://img.shields.io/crates/v/mmap-vec)](https://crates.io/crates/mmap-vec)
 [![LICENSE](https://img.shields.io/crates/l/mmap-vec)](https://raw.githubusercontent.com/arthurlm/mmap-vec/main/LICENSE)
+![MSRV](https://img.shields.io/badge/MSRV-1.66.1-blue)
 
 This crate contains implementation / helper to create data struct that are memory mapped.
 
