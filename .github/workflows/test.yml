@@ -15,8 +15,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - run: rustup toolchain install 1.65.0
-    - run: rustup override set 1.65.0
+    - run: rustup toolchain install 1.66.1
+    - run: rustup override set 1.66.1
     - uses: Swatinem/rust-cache@v2
     - run: rustc --version
     
